@@ -50,7 +50,8 @@
 // the view out again, as for any change of the root's size.
 
 import type { Board, CoreApi, PluginClassId } from "@blockr/core";
-import { Button, useBoard, useNotified } from "@blockr/core/react";
+import { useBoard, useNotified } from "@blockr/core/react";
+import { Button } from "@blockr/ui";
 import { DockviewDefaultTab, DockviewReact, themeLightSpaced } from "dockview-react";
 import type {
   DockviewReadyEvent,

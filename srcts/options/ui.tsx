@@ -1,12 +1,13 @@
 // The UI module of each of the dock's board options, a React component drawn
-// with the checkbox of core's React SDK and bound to the board option's
-// value, so that it keeps the contract's rules as core's UIs do
+// with the checkbox of blockr.ui and bound to the board option's value through
+// core's useValue(), so that it keeps the contract's rules as core's UIs do
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.7#the-contract).
-// Today's dock draws a switch, which core's SDK has none of.
+// Today's dock draws a switch.
 
 import type { OptionHost, OptionModule } from "@blockr/core";
-import { Checkbox, reactModule, useValue } from "@blockr/core/react";
+import { reactModule, useValue } from "@blockr/core/react";
 import type { ModuleProps } from "@blockr/core/react";
+import { Checkbox } from "@blockr/ui";
 import type { ReactElement } from "react";
 
 // A checkbox with the board option's label, which submits whether it is

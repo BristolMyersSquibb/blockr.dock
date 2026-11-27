@@ -6,7 +6,7 @@
  * options sidebar beside it, `.blockr-dock-sidebar`, under the column of
  * toasts beside it, `.blockr-dock-toasts`, under the block's menu,
  * `.blockr-card-menu`, and under the dock's pickers, `.blockr-dock-picker`,
- * which core's React SDK draws at the end of the page's body.
+ * which blockr.ui's components draw at the end of the page's body.
  */
 @import "dockview-react/dist/styles/dockview.css";
 @import "./card/card.css";
@@ -14,17 +14,17 @@
 /*
  * The bar and the dock below it cover the window, whatever margin the page's
  * body has.
- * The bar is 48 pixels high, and the dock's root takes the rest of the window.
+ * The bar is 12 units of the spacing high, 48 pixels, and the dock's root
+ * takes the rest of the window.
  */
 .blockr-dock {
   position: fixed;
-  inset: 48px 0 0;
+  inset: calc(var(--bk-spacing) * 12) 0 0;
 }
 
 /*
- * The dock draws in the face of core's UIs, such as the Edit board plugin's,
- * the theme variable --bc-font-sans of core's stylesheet, since the page sets
- * none.
+ * The dock draws in the face of every UI, the theme variable --bk-font-sans,
+ * since the page sets none.
  * The tabs and the prompt of an empty view take it from the dock's root, and
  * the bar, the options sidebar and the toasts, which sit beside the root,
  * take it too.
@@ -33,7 +33,17 @@
 .blockr-dock-bar,
 .blockr-dock-sidebar,
 .blockr-dock-toasts {
-  font-family: var(--bc-font-sans, system-ui, sans-serif);
+  font-family: var(--bk-font-sans);
+}
+
+/*
+ * The dock's root lies over the page behind dockview's panels, whose text is
+ * foreground.
+ * What a panel shows takes it, as a plugin's UI does that leaves its colours
+ * to the page, such as core's Edit board plugin.
+ */
+.blockr-dock {
+  color: var(--bk-color-foreground);
 }
 
 /*
@@ -46,21 +56,21 @@
 .blockr-dock[data-layout="narrow"] {
   position: relative;
   inset: auto;
-  margin-top: 48px;
+  margin-top: calc(var(--bk-spacing) * 12);
 }
 
 /*
  * While the views menu draws its line of tabs under the bar's row, the bar is
- * 87 pixels high, and the dock's root starts below it, as does the narrow
- * column (./views-menu.tsx).
+ * 22 units high, its row's 12 and the line's 10, and the dock's root starts
+ * below it, as does the narrow column (./views-menu.tsx).
  */
 .blockr-dock[data-tabs] {
-  top: 87px;
+  top: calc(var(--bk-spacing) * 22);
 }
 
 .blockr-dock[data-tabs][data-layout="narrow"] {
   top: auto;
-  margin-top: 87px;
+  margin-top: calc(var(--bk-spacing) * 22);
 }
 
 /*
@@ -74,116 +84,56 @@
 }
 
 /*
- * The dock's own pieces read the design tokens as dockview's variables do
- * below: the "+" of a tab group, the prompt of an empty view, the bar, the
- * dock's menus, the block cards (./card/card.css) and the options sidebar.
- * So do the block's menu and the dock's pickers, which sit outside the dock's
- * root, at the end of the page's body, so that the dock sets the variables on
- * them too.
- * Each reads a variable of the dock's, which reads a token of blockr.ui's with
- * the token's value in the light scheme as the fallback, or in the dark scheme
- * under the dark theme.
- * The logo's green is the same in both.
+ * The dock draws its own pieces with the theme variables of blockr.ui, under
+ * --bk-, which blockr.ui's stylesheet gives the page's root, so that a value
+ * of the frontend's theme or of the app's reaches them, and every overlay at
+ * the end of the page's body
+ * (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.7.2#the-frontends-own-parts):
+ * the "+" of a tab group, the prompt of an empty view, the bar with its menus,
+ * the block cards (./card/card.css), the options sidebar, the toasts, and the
+ * block's menu and the dock's pickers, which blockr.ui's components draw.
+ * The dock keeps every default of blockr.ui, so its stylesheet sets no theme
+ * variable, and holds no colour of its own.
+ * - Each piece takes the colours of the job that it does: the bar, the
+ *   sidebar and the cards are cards, and their text card-foreground; the
+ *   menus, the pickers, the toasts and the tooltips are popovers; the page
+ *   behind dockview's panels is the background.
+ *   A row or a button under the pointer takes the fill of a hover, accent,
+ *   and its text, accent-foreground.
+ *   The edge of what is current or picked is primary, and the focus outline
+ *   is ring.
+ * - An error and a warning take destructive and warning, their text
+ *   destructive-text and warning-text, and their tints come from them at 10%,
+ *   with edges at 35% and 45%, as the tints of core's notifications do.
+ *   The wash of what is selected, or of a drop that would land, is primary
+ *   at 7%.
+ * - Secondary text is muted-foreground, and a disabled control keeps its
+ *   colour at half its opacity, as blockr.ui's buttons draw one.
+ * - The radii derive from --bk-radius as the steps of blockr.ui's scale do:
+ *   0.6 of it for a small corner, 0.8 of it for a medium one, the radius
+ *   itself for a large one, and 1.4 of it for the frame of dockview's
+ *   panels.
+ *   A pill and a dot keep their round ends under any radius.
+ * - Each padding, margin and gap is a multiple of --bk-spacing, the unit,
+ *   which is 4px by default: 0.5, 1, 1.5, 2, 2.5, 3, 4 or 8 units, as a row
+ *   of blockr.ui's lists takes 2.5 units at its sides.
+ *   So is each height of a control or a row: 5, 6, 7.5 or 8 units, as a
+ *   token of blockr.ui is 5 units high, a field 7.5 and a row of its lists 8.
+ *   So are the heights of the bar, 12 units, and of the line of tabs under
+ *   it, 10, and what makes room for them.
+ *   The sizes in pixels that the comments give are those of the default unit.
+ * - The drawings keep their sizes in pixels, as the icons of blockr.ui do:
+ *   the icons, the marks, the dots and the line where a drag would land.
+ *   So do the widths of the menus, the pickers, the sidebar and the toasts,
+ *   and the offsets of a menu from its button, as blockr.ui's popovers take
+ *   theirs in pixels.
+ * - Each size of text is one of the four steps of the theme variables,
+ *   --bk-text-xs to --bk-text-lg, but that of a mark, which sizes its icon
+ *   (./card/card.css).
+ * - What the dock draws beyond the jobs, such as the stronger focus ring of a
+ *   card in dark mode, keys on the attribute data-bk-mode of the page's root,
+ *   which core's board option dark_mode sets.
  */
-.blockr-dock,
-.blockr-dock-bar,
-.blockr-dock-sidebar,
-.blockr-card-menu,
-.blockr-dock-picker {
-  --blockr-dock-text: var(--blockr-color-text-default, #111827);
-  --blockr-dock-text-muted: var(--blockr-color-text-muted, #6b7280);
-  --blockr-dock-text-accent: var(--blockr-color-text-accent, #2563eb);
-  --blockr-dock-bg-raised: var(--blockr-color-bg-raised, #ffffff);
-  --blockr-dock-bg-field: var(--blockr-color-bg-field, #f9fafb);
-  --blockr-dock-bg-hover: var(--blockr-color-bg-hover, #f3f4f6);
-  --blockr-dock-bg-accent-subtle: var(
-    --blockr-color-bg-accent-subtle,
-    color-mix(in srgb, #2563eb 7%, transparent)
-  );
-  --blockr-dock-border: var(--blockr-color-border-default, #e5e7eb);
-  --blockr-dock-border-accent: var(--blockr-color-border-accent, #2563eb);
-  --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.1));
-  --blockr-dock-text-secondary: var(--blockr-color-text-secondary, #374151);
-  --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #9ca3af);
-  --blockr-dock-text-warning: var(--blockr-color-text-warning, #b45309);
-  --blockr-dock-bg-warning: var(--blockr-color-bg-warning, #fffbeb);
-  --blockr-dock-border-warning: var(--blockr-color-border-warning, #d97706);
-  --blockr-dock-border-warning-subtle: var(
-    --blockr-color-border-warning-subtle,
-    color-mix(in srgb, #d97706 45%, transparent)
-  );
-  --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #ffffff);
-  --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #f9fafb);
-  --blockr-dock-border-strong: var(--blockr-color-border-strong, #d1d5db);
-  --blockr-dock-border-accent-subtle: var(
-    --blockr-color-border-accent-subtle,
-    color-mix(in srgb, #2563eb 35%, transparent)
-  );
-  --blockr-dock-border-danger-subtle: var(
-    --blockr-color-border-danger-subtle,
-    color-mix(in srgb, #dc2626 35%, transparent)
-  );
-  --blockr-dock-logo: var(--blockr-logo, #089e76);
-  --blockr-dock-text-danger: var(--blockr-color-text-danger, #b91c1c);
-  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, #fef2f2);
-  --blockr-dock-border-danger: var(--blockr-color-border-danger, #dc2626);
-  --blockr-dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(37 99 235 / 0.12));
-  --blockr-dock-bg-selected: var(
-    --blockr-color-bg-selected,
-    color-mix(in srgb, #2563eb 7%, transparent)
-  );
-  --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #1d4ed8);
-}
-
-[data-bc-theme="dark"] .blockr-dock,
-[data-bc-theme="dark"] .blockr-dock-bar,
-[data-bc-theme="dark"] .blockr-dock-sidebar,
-[data-bc-theme="dark"] .blockr-card-menu,
-[data-bc-theme="dark"] .blockr-dock-picker {
-  --blockr-dock-text: var(--blockr-color-text-default, #f0f3f7);
-  --blockr-dock-text-muted: var(--blockr-color-text-muted, #8a94a3);
-  --blockr-dock-text-accent: var(--blockr-color-text-accent, #60a5fa);
-  --blockr-dock-bg-raised: var(--blockr-color-bg-raised, #1e242e);
-  --blockr-dock-bg-field: var(--blockr-color-bg-field, #14181f);
-  --blockr-dock-bg-hover: var(--blockr-color-bg-hover, color-mix(in srgb, #f0f3f7 6%, transparent));
-  --blockr-dock-bg-accent-subtle: var(
-    --blockr-color-bg-accent-subtle,
-    color-mix(in srgb, #3b82f6 7%, transparent)
-  );
-  --blockr-dock-border: var(--blockr-color-border-default, #232932);
-  --blockr-dock-border-accent: var(--blockr-color-border-accent, #3b82f6);
-  --blockr-dock-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
-  --blockr-dock-text-secondary: var(--blockr-color-text-secondary, #c2c9d3);
-  --blockr-dock-text-disabled: var(--blockr-color-text-disabled, #6b7686);
-  --blockr-dock-text-warning: var(--blockr-color-text-warning, #fbbf24);
-  --blockr-dock-bg-warning: var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1));
-  --blockr-dock-border-warning: var(--blockr-color-border-warning, #fbbf24);
-  --blockr-dock-border-warning-subtle: var(
-    --blockr-color-border-warning-subtle,
-    color-mix(in srgb, #fbbf24 45%, transparent)
-  );
-  --blockr-dock-bg-surface: var(--blockr-color-bg-surface, #161b23);
-  --blockr-dock-bg-subtle: var(--blockr-color-bg-subtle, #14181f);
-  --blockr-dock-border-strong: var(--blockr-color-border-strong, #2d343f);
-  --blockr-dock-border-accent-subtle: var(
-    --blockr-color-border-accent-subtle,
-    color-mix(in srgb, #3b82f6 35%, transparent)
-  );
-  --blockr-dock-border-danger-subtle: var(
-    --blockr-color-border-danger-subtle,
-    color-mix(in srgb, #f87171 35%, transparent)
-  );
-  --blockr-dock-logo: var(--blockr-logo, #089e76);
-  --blockr-dock-text-danger: var(--blockr-color-text-danger, #f87171);
-  --blockr-dock-bg-danger: var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1));
-  --blockr-dock-border-danger: var(--blockr-color-border-danger, #f87171);
-  --blockr-dock-focus-ring: var(--blockr-focus-ring, 0 0 0 3px rgb(96 165 250 / 0.28));
-  --blockr-dock-bg-selected: var(
-    --blockr-color-bg-selected,
-    color-mix(in srgb, #3b82f6 7%, transparent)
-  );
-  --blockr-dock-text-accent-strong: var(--blockr-color-text-accent-strong, #60a5fa);
-}
 
 /*
  * The "+" in the header of a tab group, which opens the panel picker, in a
@@ -193,31 +143,31 @@
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 0 4px;
+  padding: 0 calc(var(--bk-spacing) * 1);
 }
 
 .blockr-dock-add {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: calc(var(--bk-spacing) * 6);
+  height: calc(var(--bk-spacing) * 6);
   padding: 0;
   border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
+  border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
 }
 
 .blockr-dock-add:hover,
 .blockr-dock-add[aria-expanded="true"] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-dock-add:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 
@@ -233,43 +183,44 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  gap: calc(var(--bk-spacing) * 3);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-sm);
 }
 
 .blockr-dock-empty p {
   margin: 0;
 }
 
-/* The prompt's button, outlined in the accent colour, as today's. */
+/* The prompt's button, outlined in the brand colour, primary, as today's. */
 .blockr-dock-empty-add {
-  padding: 4px 12px;
-  border: 1px solid var(--blockr-dock-border-accent);
-  border-radius: var(--blockr-radius-md, 6px);
+  padding: calc(var(--bk-spacing) * 1) calc(var(--bk-spacing) * 3);
+  border: 1px solid var(--bk-color-primary);
+  border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
-  color: var(--blockr-dock-text-accent);
+  color: var(--bk-color-primary-text);
   font: inherit;
   cursor: pointer;
 }
 
 .blockr-dock-empty-add:hover,
 .blockr-dock-empty-add[aria-expanded="true"] {
-  background: var(--blockr-dock-bg-accent-subtle);
+  background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
 }
 
 .blockr-dock-empty-add:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 2px;
 }
 
 /*
  * A menu of the dock (./menu.tsx): the menus of the bar and the views menu.
  * It is the design system's floating surface, a popover in the top layer:
- * bg-raised, 1px border, radius 8 and shadow-md, 180 to 320 pixels wide and
- * up to 320 pixels tall, then scrolling.
- * Its rows are 34 pixels tall at 14px, radius 4 and 10px to the sides,
- * inside 6px of padding.
+ * the popover's colours, a 1px border, the large radius and shadow-md, 180 to
+ * 320 pixels wide and up to 320 pixels tall, then scrolling.
+ * Its rows are 32 pixels tall, as the rows of blockr.ui's lists are, in the
+ * base size of text, with the small radius and 10px to the sides, inside 4px
+ * of padding, as blockr.ui's menu has.
  * It sits 4px below the button that opened it, lined up with the button's
  * left edge, or its right edge for a menu that its data-align puts at the
  * end, and a menu inside a menu sits 4px beside the row that opened it.
@@ -283,14 +234,14 @@
   max-width: min(320px, calc(100vw - 16px));
   max-height: min(320px, calc(100vh - 16px));
   overflow-y: auto;
-  padding: 6px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-lg, 8px);
-  background: var(--blockr-dock-bg-raised);
-  box-shadow: var(--blockr-dock-shadow);
-  color: var(--blockr-dock-text);
-  font-family: var(--bc-font-sans, system-ui, sans-serif);
-  font-size: var(--blockr-font-size-base, 0.875rem);
+  padding: calc(var(--bk-spacing) * 1);
+  border: 1px solid var(--bk-color-border);
+  border-radius: var(--bk-radius);
+  background: var(--bk-color-popover);
+  box-shadow: var(--bk-shadow-md);
+  color: var(--bk-color-popover-foreground);
+  font-family: var(--bk-font-sans);
+  font-size: var(--bk-text-base);
   outline: none;
 }
 
@@ -335,16 +286,17 @@
 .blockr-dock-menu-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(var(--bk-spacing) * 2);
   box-sizing: border-box;
   width: 100%;
-  min-height: 34px;
+  min-height: calc(var(--bk-spacing) * 8);
   margin: 0;
-  padding: 7px 10px 7px calc(10px + var(--depth, 0) * 16px);
+  padding: calc(var(--bk-spacing) * 1.5) calc(var(--bk-spacing) * 2.5);
+  padding-left: calc(var(--bk-spacing) * 2.5 + var(--depth, 0) * var(--bk-spacing) * 4);
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-popover-foreground);
   font: inherit;
   text-align: start;
   text-decoration: none;
@@ -354,12 +306,13 @@
 
 .blockr-dock-menu-row[data-active],
 .blockr-dock-menu-row[aria-haspopup][aria-expanded="true"] {
-  background: var(--blockr-dock-bg-hover);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 /* The current pick of a set, as the active view, is set in weight 600. */
 .blockr-dock-menu-row[role="menuitemradio"][aria-checked="true"] {
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-weight: 600;
 }
 
 /* A toggle that is on ends on a check, at the row's weight. */
@@ -382,7 +335,7 @@
 }
 
 .blockr-dock-menu-fold .blockr-dock-chevron {
-  transition: transform var(--blockr-transition, 0.15s ease);
+  transition: transform 0.15s ease;
 }
 
 [aria-expanded="false"] > .blockr-dock-menu-fold .blockr-dock-chevron {
@@ -391,7 +344,7 @@
 
 /* A disabled row is listed, but takes no hover, and its tooltip says why. */
 .blockr-dock-menu-row[aria-disabled="true"] {
-  color: var(--blockr-dock-text-disabled);
+  opacity: 0.5;
   cursor: default;
 }
 
@@ -402,24 +355,24 @@
 /* The chevron of a row that opens a menu beside it. */
 .blockr-dock-menu-row .blockr-dock-chevron {
   flex: none;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 
 /* A status: text in the muted colour, which runs nothing. */
 .blockr-dock-menu-status {
   display: flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 10px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  min-height: calc(var(--bk-spacing) * 8);
+  padding: 0 calc(var(--bk-spacing) * 2.5);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-sm);
 }
 
 /* A row that destroys something is plain at rest, and red only as the row
    that the pointer or the keyboard is on. */
 .blockr-dock-menu-row[data-danger][data-active] {
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
+  background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
+  color: var(--bk-color-destructive-text);
 }
 
 .blockr-dock-menu-lead {
@@ -427,16 +380,16 @@
   flex-shrink: 0;
   justify-content: center;
   min-width: 16px;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 
 .blockr-dock-menu-row[data-active] .blockr-dock-menu-lead,
 .blockr-dock-menu-row[data-active] .blockr-dock-menu-meta {
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-dock-menu-row[data-danger][data-active] .blockr-dock-menu-lead {
-  color: var(--blockr-dock-text-danger);
+  color: var(--bk-color-destructive-text);
 }
 
 .blockr-dock-menu-label {
@@ -449,64 +402,66 @@
 /* Text in a monospaced face after the label, as the id of a block. */
 .blockr-dock-menu-meta {
   flex-shrink: 0;
-  margin-left: 12px;
-  padding-left: 16px;
-  color: var(--blockr-dock-text-muted);
-  font-family: var(--blockr-font-mono, "SF Mono", "Fira Code", "Consolas", "Monaco", monospace);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  margin-left: calc(var(--bk-spacing) * 3);
+  padding-left: calc(var(--bk-spacing) * 4);
+  color: var(--bk-color-muted-foreground);
+  font-family: var(--bk-font-mono);
+  font-size: var(--bk-text-sm);
 }
 
 .blockr-dock-menu-divider {
   height: 1px;
-  margin: 6px -6px;
+  margin: calc(var(--bk-spacing) * 1.5) calc(var(--bk-spacing) * -1);
   border: 0;
-  background: var(--blockr-dock-border);
+  background: var(--bk-color-border);
 }
 
 /* What the menu says where it lists no row. */
 .blockr-dock-menu-note {
   margin: 0;
-  padding: 10px;
-  color: var(--blockr-dock-text-muted);
+  padding: calc(var(--bk-spacing) * 2) calc(var(--bk-spacing) * 2.5);
+  color: var(--bk-color-muted-foreground);
   font-style: italic;
   text-align: center;
 }
 
 /*
  * The dock's pickers, the panel picker and the "+" menu of a block's card,
- * which core's React SDK draws in core's theme, in a portal at the end of the
- * page's body (./picker.tsx).
+ * which blockr.ui's components draw, in a portal at the end of the page's
+ * body (./picker.tsx).
  * A picker is 180 to 320 pixels wide and up to 320 pixels tall, which React
  * Aria gives it as its most, inside 6px of padding.
  * Its menu alone scrolls, under the caption and the search.
- * What the dock draws besides core's theme:
- * - The caption, one muted line at 12px, which says what the picker is for.
+ * What the dock draws besides blockr.ui's components:
+ * - The caption, one muted line in the extra small size of text, which says
+ *   what the picker is for.
  * - The mark of a row's block class before its label, and the name of the
  *   class as muted text after it.
  *   The muted text turns the row's colour on the row that the pointer or the
  *   keyboard is on.
- * - The package of a block class as a neutral badge at the row's end: an 18
- *   pixel capsule at 11px, weight 500.
+ * - The package of a block class as a neutral badge at the row's end: a
+ *   capsule 20 pixels high in the extra small size of text, at weight 500,
+ *   as blockr.ui draws a token.
  * - The note in place of the rows, where there is none to list, or the search
  *   keeps none.
  */
 .blockr-dock-picker {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: calc(var(--bk-spacing) * 1.5);
   box-sizing: border-box;
   min-width: 180px;
   max-width: min(320px, calc(100vw - 16px));
-  padding: 6px;
+  padding: calc(var(--bk-spacing) * 1.5);
 }
 
 .blockr-dock-picker-caption {
   flex: none;
   margin: 0;
-  padding: 0 4px;
+  padding: 0 calc(var(--bk-spacing) * 1);
   overflow: hidden;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -525,7 +480,7 @@
 .blockr-dock-picker-name {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(var(--bk-spacing) * 2);
   min-width: 0;
 }
 
@@ -542,8 +497,8 @@
 
 .blockr-dock-picker-detail {
   flex: none;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-sm);
 }
 
 .blockr-dock-picker :is([data-focused], [data-hovered]) .blockr-dock-picker-detail {
@@ -552,103 +507,80 @@
 
 .blockr-dock-picker-badge {
   display: inline-flex;
+  box-sizing: border-box;
   align-items: center;
-  height: 18px;
-  padding: 0 7px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text-muted);
-  font-size: 11px;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  height: calc(var(--bk-spacing) * 5);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
+  border: 1px solid var(--bk-color-border);
+  border-radius: 999px;
+  background: var(--bk-color-muted);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-xs);
+  font-weight: 500;
 }
 
 .blockr-dock-picker-note {
   margin: 0;
-  padding: 10px;
-  color: var(--blockr-dock-text-muted);
+  padding: calc(var(--bk-spacing) * 2) calc(var(--bk-spacing) * 2.5);
+  color: var(--bk-color-muted-foreground);
   font-style: italic;
   text-align: center;
 }
 
 /*
- * Dockview reads the design tokens.
- * Dockview paints its frame and tabs from its own variables, so this bridge
- * sets them to blockr.ui's tokens, on dockview's light-spaced theme, as
- * today's dock does.
- * Each token is read with its value in blockr.ui's light scheme as the
- * fallback under the light theme, and with its value in the dark scheme under
- * the dark theme, which core switches the page to in data-bc-theme, as the
- * board option dark_mode says.
- * So the dock draws in either theme on a page that holds no token sheet of
- * blockr.ui, until the client settles how the tokens reach the page.
- * The values are those of blockr.ui's tokens at e14e831.
- * The selectors take the dock's root, so that they win over the class of
+ * Dockview draws its frame and tabs from its own variables, on its
+ * light-spaced theme, so the dock gives them their values from the theme
+ * variables, as it draws its own pieces, and the frame follows the page's
+ * mode with them.
+ * The page behind the panels is the background, a group's header is a card,
+ * the tab of the active panel takes the accent wash of what is selected and
+ * the brand colour's text, and the frame takes the larger radius of the
+ * panels, 1.4 times --bk-radius.
+ * Its tabs take the extra small size of text, and the rest of a group's
+ * header the small one, which are dockview's own sizes at the defaults.
+ * Its spacing stays dockview's: the height of a group's header, the margins
+ * of its tabs and the room around the groups, since dockview's script sizes
+ * the gaps between groups and a collapsed rail in pixels, from its theme
+ * object, which a value of --bk-spacing would leave behind.
+ * The selector takes the dock's root, so that it wins over the class of
  * dockview's theme, which sets the same variables on the same element.
- * The dark scheme also sets the two colours that dockview's light values,
- * black at a low alpha, make vanish on a dark surface: white at the same
- * weight reads the same.
- * A test checks that the dark theme sets each colour that dockview's
- * light-spaced theme sets otherwise than its dark abyss-spaced theme does,
- * but for those of features that the dock does not use.
+ * It also sets the two colours that dockview's values, black or grey at a low
+ * alpha, make vanish on a dark surface: the scrollbar takes the text at the
+ * same weight, and the hover of an icon takes the fill of a hover.
+ * A test checks that the bridge sets each colour that dockview's light-spaced
+ * theme sets otherwise than its dark abyss-spaced theme does, but for those
+ * of features that the dock does not use.
  */
 .blockr-dock .dv-shell {
-  --dv-group-view-background-color: var(--blockr-color-bg-page, #f9fafb);
-  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface, #ffffff);
+  --dv-group-view-background-color: var(--bk-color-background);
+  --dv-tabs-and-actions-container-background-color: var(--bk-color-card);
 
-  --dv-activegroup-visiblepanel-tab-background-color: var(
-    --blockr-color-bg-selected,
-    color-mix(in srgb, #2563eb 7%, transparent)
+  --dv-activegroup-visiblepanel-tab-background-color: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
+  --dv-activegroup-visiblepanel-tab-color: var(--bk-color-primary-text);
+  --dv-inactivegroup-visiblepanel-tab-background-color: color-mix(
+    in oklab,
+    var(--bk-color-card-foreground) 10%,
+    transparent
   );
-  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent, #2563eb);
-  --dv-inactivegroup-visiblepanel-tab-background-color: var(
-    --blockr-color-bg-selected-inactive,
-    color-mix(in srgb, #111827 10%, transparent)
-  );
-  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default, #111827);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--bk-color-card-foreground);
   --dv-activegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #6b7280);
+  --dv-activegroup-hiddenpanel-tab-color: var(--bk-color-muted-foreground);
   --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #6b7280);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--bk-color-muted-foreground);
 
   --dv-separator-border: transparent;
   --dv-sash-color: transparent;
   --dv-tab-divider-color: transparent;
-  --dv-active-sash-color: var(--blockr-color-border-accent, #2563eb);
+  --dv-active-sash-color: var(--bk-color-primary);
 
-  --dv-border-radius: var(--blockr-radius-xl, 12px);
-  --dv-tab-border-radius: var(--blockr-radius-lg, 8px);
-}
+  --dv-border-radius: calc(var(--bk-radius) * 1.4);
+  --dv-tab-border-radius: var(--bk-radius);
 
-[data-bc-theme="dark"] .blockr-dock .dv-shell {
-  --dv-group-view-background-color: var(--blockr-color-bg-page, #0e1219);
-  --dv-tabs-and-actions-container-background-color: var(--blockr-color-bg-surface, #161b23);
+  --dv-tabs-and-actions-container-font-size: var(--bk-text-sm);
+  --dv-tab-font-size: var(--bk-text-xs);
 
-  --dv-activegroup-visiblepanel-tab-background-color: var(
-    --blockr-color-bg-selected,
-    color-mix(in srgb, #3b82f6 7%, transparent)
-  );
-  --dv-activegroup-visiblepanel-tab-color: var(--blockr-color-text-accent, #60a5fa);
-  --dv-inactivegroup-visiblepanel-tab-background-color: var(
-    --blockr-color-bg-selected-inactive,
-    color-mix(in srgb, #f0f3f7 10%, transparent)
-  );
-  --dv-inactivegroup-visiblepanel-tab-color: var(--blockr-color-text-default, #f0f3f7);
-  --dv-activegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-activegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #8a94a3);
-  --dv-inactivegroup-hiddenpanel-tab-background-color: transparent;
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--blockr-color-text-muted, #8a94a3);
-
-  --dv-separator-border: transparent;
-  --dv-sash-color: transparent;
-  --dv-tab-divider-color: transparent;
-  --dv-active-sash-color: var(--blockr-color-border-accent, #3b82f6);
-
-  --dv-border-radius: var(--blockr-radius-xl, 12px);
-  --dv-tab-border-radius: var(--blockr-radius-lg, 8px);
-
-  --dv-scrollbar-background-color: rgb(255 255 255 / 0.25);
-  --dv-icon-hover-background-color: rgb(255 255 255 / 0.14);
+  --dv-scrollbar-background-color: color-mix(in oklab, var(--bk-color-foreground) 25%, transparent);
+  --dv-icon-hover-background-color: var(--bk-color-accent);
 }
 
 /*
@@ -671,8 +603,8 @@
  * The frame of a plugin's tab, which lays out as dockview's tab alone
  * (./dock.tsx).
  * While a warning or an error about the plugin holds, a dot comes before the
- * plugin's name on the tab: 6px, in the danger colour for an error and in the
- * amber for a warning.
+ * plugin's name on the tab: 6px, in destructive for an error and in warning
+ * for a warning.
  * It comes before the name on a rail's tabs too, whose names run downwards.
  * So the name keeps the dot apart from the tab's close button, which sits off
  * the name's line on a rail.
@@ -693,13 +625,13 @@
   flex: none;
   width: 6px;
   height: 6px;
-  margin-inline-end: 6px;
+  margin-inline-end: calc(var(--bk-spacing) * 1.5);
   border-radius: 50%;
-  background-color: var(--blockr-dock-border-danger);
+  background-color: var(--bk-color-destructive);
 }
 
 .blockr-dock-tab-frame[data-notified="warning"] .dv-default-tab-content::before {
-  background-color: var(--blockr-dock-border-warning);
+  background-color: var(--bk-color-warning);
 }
 
 /*
@@ -713,84 +645,63 @@
  */
 .blockr-dock-toasts {
   position: fixed;
-  right: 0.5rem;
-  bottom: 0.5rem;
-  z-index: var(--blockr-z-toast, 1090);
+  right: calc(var(--bk-spacing) * 2);
+  bottom: calc(var(--bk-spacing) * 2);
+  z-index: 1090;
   box-sizing: border-box;
   display: grid;
-  gap: 0.5rem;
+  gap: calc(var(--bk-spacing) * 2);
   width: 21rem;
-  max-width: calc(100vw - 1rem);
-  max-height: calc(100dvh - 1rem);
+  max-width: calc(100vw - var(--bk-spacing) * 4);
+  max-height: calc(100dvh - var(--bk-spacing) * 4);
   margin: 0;
-  padding: 0.5rem;
+  padding: calc(var(--bk-spacing) * 2);
   overflow-y: auto;
   pointer-events: none;
 }
 
 /*
- * A toast takes the message style of blockr.ui's design system: 13px, a
- * radius of 6px, and a fill and edge for its severity.
- * A message's toast is neutral, on the raised surface of menus, with the
- * default edge.
- * An error's toast takes the danger set and a warning's the amber set.
- * Their fills are tints, which the dark scheme draws see-through, so each
- * tint lies over the raised surface, and the page does not show through the
- * toast.
- * Each token is read with its value in blockr.ui's light scheme as the
- * fallback under the light theme, and with its value in the dark scheme under
- * the dark theme, as in the bridge to dockview's theme above.
+ * A toast takes the message style of blockr.ui's design system: the small
+ * text, a medium radius, and a fill and edge for its severity.
+ * A message's toast is neutral: a popover, with the default edge, as the
+ * menus are.
+ * An error's toast takes the colours of destructive, and a warning's those of
+ * warning: the text of the colour, and its tint over the popover, with an
+ * edge of the colour at 35% or 45%.
+ * The tint lies over the popover, as a gradient over the background colour,
+ * so that the page does not show through the toast.
  */
 .blockr-dock-toast {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--blockr-color-border-default, #e5e7eb);
-  border-radius: var(--blockr-radius-md, 6px);
-  background-color: var(--blockr-color-bg-raised, #ffffff);
-  color: var(--blockr-color-text-default, #111827);
-  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.1));
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  gap: calc(var(--bk-spacing) * 2);
+  padding: calc(var(--bk-spacing) * 2) calc(var(--bk-spacing) * 3);
+  border: 1px solid var(--bk-color-border);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  background-color: var(--bk-color-popover);
+  color: var(--bk-color-popover-foreground);
+  box-shadow: var(--bk-shadow-md);
+  font-size: var(--bk-text-sm);
   pointer-events: auto;
   transition: opacity 300ms;
 }
 
 .blockr-dock-toast[data-severity="error"] {
-  border-color: var(--blockr-color-border-danger-subtle, color-mix(in srgb, #dc2626 35%, transparent));
-  background-image: linear-gradient(var(--blockr-color-bg-danger, #fef2f2), var(--blockr-color-bg-danger, #fef2f2));
-  color: var(--blockr-color-text-danger, #b91c1c);
+  border-color: color-mix(in oklab, var(--bk-color-destructive) 35%, transparent);
+  background-image: linear-gradient(
+    color-mix(in oklab, var(--bk-color-destructive) 10%, transparent),
+    color-mix(in oklab, var(--bk-color-destructive) 10%, transparent)
+  );
+  color: var(--bk-color-destructive-text);
 }
 
 .blockr-dock-toast[data-severity="warning"] {
-  border-color: var(--blockr-color-border-warning-subtle, color-mix(in srgb, #d97706 45%, transparent));
-  background-image: linear-gradient(var(--blockr-color-bg-warning, #fffbeb), var(--blockr-color-bg-warning, #fffbeb));
-  color: var(--blockr-color-text-warning, #b45309);
-}
-
-[data-bc-theme="dark"] .blockr-dock-toast {
-  border-color: var(--blockr-color-border-default, #232932);
-  background-color: var(--blockr-color-bg-raised, #1e242e);
-  color: var(--blockr-color-text-default, #f0f3f7);
-  box-shadow: var(--blockr-shadow-md, 0 4px 12px rgb(0 0 0 / 0.5));
-}
-
-[data-bc-theme="dark"] .blockr-dock-toast[data-severity="error"] {
-  border-color: var(--blockr-color-border-danger-subtle, color-mix(in srgb, #f87171 35%, transparent));
+  border-color: color-mix(in oklab, var(--bk-color-warning) 45%, transparent);
   background-image: linear-gradient(
-    var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1)),
-    var(--blockr-color-bg-danger, rgb(248 113 113 / 0.1))
+    color-mix(in oklab, var(--bk-color-warning) 10%, transparent),
+    color-mix(in oklab, var(--bk-color-warning) 10%, transparent)
   );
-  color: var(--blockr-color-text-danger, #f87171);
-}
-
-[data-bc-theme="dark"] .blockr-dock-toast[data-severity="warning"] {
-  border-color: var(--blockr-color-border-warning-subtle, color-mix(in srgb, #fbbf24 45%, transparent));
-  background-image: linear-gradient(
-    var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1)),
-    var(--blockr-color-bg-warning, rgb(251 191 36 / 0.1))
-  );
-  color: var(--blockr-color-text-warning, #fbbf24);
+  color: var(--bk-color-warning-text);
 }
 
 /* A message's toast fades before it goes, at once under reduced motion. */
@@ -809,12 +720,12 @@
  * concerns, in bold, and the message below it, which keeps its line breaks
  * and wraps a long word, such as a path.
  * The package in the first line keeps the toast's colour, since the design
- * system puts no muted text on the danger fill.
+ * system puts no muted text on the tint of destructive.
  */
 .blockr-dock-toast-text {
   display: grid;
   flex: 1;
-  gap: 0.25rem;
+  gap: calc(var(--bk-spacing) * 1);
   min-width: 0;
 }
 
@@ -824,7 +735,7 @@
 }
 
 .blockr-dock-toast-title {
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-weight: 600;
 }
 
 .blockr-dock-toast-package {
@@ -839,7 +750,7 @@
 /*
  * The link of a toast that shows a plugin's panel, under the message: a quiet
  * text button in the toast's colour, at weight 500 and underlined, with the
- * focus outline of blockr.ui's design system.
+ * focus outline in ring.
  */
 .blockr-dock-toast-link {
   justify-self: start;
@@ -848,7 +759,7 @@
   background: transparent;
   color: inherit;
   font: inherit;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-weight: 500;
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
@@ -859,54 +770,42 @@
 }
 
 .blockr-dock-toast-link:focus-visible {
-  border-radius: var(--blockr-radius-sm, 4px);
-  outline: var(--blockr-focus-outline, 2px solid #2563eb);
-  outline-offset: var(--blockr-focus-offset, 2px);
-}
-
-[data-bc-theme="dark"] .blockr-dock-toast-link:focus-visible {
-  outline: var(--blockr-focus-outline, 2px solid #3b82f6);
+  border-radius: calc(var(--bk-radius) * 0.6);
+  outline: 2px solid var(--bk-color-ring);
+  outline-offset: 2px;
 }
 
 /*
  * The button that closes a toast, a quiet icon button in the toast's colour,
- * with the hover and the focus outline of blockr.ui's design system.
+ * with the fill of a hover and the focus outline in ring.
  */
 .blockr-dock-toast-close {
   flex: none;
-  margin: -0.125rem -0.25rem 0 0;
-  padding: 0 0.375rem;
+  margin: calc(var(--bk-spacing) * -0.5) calc(var(--bk-spacing) * -1) 0 0;
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
   color: inherit;
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--bk-text-lg);
   line-height: 1.5;
   cursor: pointer;
 }
 
 .blockr-dock-toast-close:hover {
-  background-color: var(--blockr-color-bg-hover, #f3f4f6);
+  background-color: var(--bk-color-accent);
 }
 
 .blockr-dock-toast-close:focus-visible {
-  outline: var(--blockr-focus-outline, 2px solid #2563eb);
-  outline-offset: var(--blockr-focus-offset, 2px);
-}
-
-[data-bc-theme="dark"] .blockr-dock-toast-close:hover {
-  background-color: var(--blockr-color-bg-hover, color-mix(in srgb, #f0f3f7 6%, transparent));
-}
-
-[data-bc-theme="dark"] .blockr-dock-toast-close:focus-visible {
-  outline: var(--blockr-focus-outline, 2px solid #3b82f6);
+  outline: 2px solid var(--bk-color-ring);
+  outline-offset: 2px;
 }
 
 /*
  * The bar across the top of the dock (./navbar.tsx), in the navbar style of
- * blockr.ui's design system: 48 pixels high, on the surface, with a rule under
- * it, every control 30 pixels high, and tokens only.
+ * blockr.ui's design system: 48 pixels high, a card with a rule under it,
+ * every control 30 pixels high, and theme variables only.
  * It sits in the fixed layer of the design system, so that the narrow column
  * scrolls under it.
  * It draws its items in one row, 8 pixels apart.
@@ -927,18 +826,18 @@
   top: 0;
   right: 0;
   left: 0;
-  z-index: var(--blockr-z-fixed, 1030);
+  z-index: 1030;
   box-sizing: border-box;
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
-  height: 48px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--blockr-dock-border);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
+  gap: calc(var(--bk-spacing) * 2);
+  height: calc(var(--bk-spacing) * 12);
+  padding: 0 calc(var(--bk-spacing) * 3);
+  border-bottom: 1px solid var(--bk-color-border);
+  background: var(--bk-color-card);
+  color: var(--bk-color-card-foreground);
+  font-size: var(--bk-text-sm);
 }
 
 .blockr-dock-bar > * {
@@ -974,51 +873,52 @@
 }
 
 /*
- * A quiet button of the design system, at its size s: text only, in the muted
- * colour, 30 pixels high with 8 pixels at each side, which takes the hover
- * wash.
+ * A quiet button of the design system, at its size s: text only, in
+ * muted-foreground, 30 pixels high with 8 pixels at each side, which takes the
+ * fill of a hover.
  * Links, menus, the storage plugin's buttons, Undo, Redo and the options
  * button all take it, so that every control on the bar shows its label.
  * A menu's chevron follows its label, and flips up while the menu is open.
  * The storage plugin's buttons, Undo, Redo and the options button are the
- * Button of core's React SDK, whose quiet look these rules override, its wash
- * on a disabled button included.
+ * Button of blockr.ui, whose quiet look these rules override.
+ * A disabled button keeps its colour at half its opacity, as blockr.ui's
+ * other buttons draw one.
  */
 .blockr-dock-bar-button {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 30px;
-  padding: 0 8px;
+  gap: calc(var(--bk-spacing) * 1);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 2);
   border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
+  border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--blockr-transition, 0.15s ease),
-    color var(--blockr-transition, 0.15s ease);
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .blockr-dock-bar-button:hover:not(:disabled),
 .blockr-dock-bar-button[aria-expanded="true"] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-dock-bar-button:disabled {
   background: transparent;
-  color: var(--blockr-dock-text-disabled);
+  opacity: 0.5;
   cursor: default;
 }
 
 .blockr-dock-bar-button .blockr-dock-chevron {
   flex: none;
-  transition: transform var(--blockr-transition, 0.15s ease);
+  transition: transform 0.15s ease;
 }
 
 .blockr-dock-bar-button[aria-expanded="true"] .blockr-dock-chevron {
@@ -1029,44 +929,45 @@
 .blockr-dock-bar-steps {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: calc(var(--bk-spacing) * 1);
 }
 
 .blockr-dock-bar-button:focus-visible,
 .blockr-dock-bar-name:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 
 /*
- * While the views menu draws its line of tabs, the bar grows by the line, 39
+ * While the views menu draws its line of tabs, the bar grows by the line, 40
  * pixels with its rule, under its row, which keeps its height.
  */
 .blockr-dock-bar[data-tabs] {
-  height: 87px;
-  padding-bottom: 39px;
+  height: calc(var(--bk-spacing) * 22);
+  padding-bottom: calc(var(--bk-spacing) * 10);
 }
 
 /*
  * The board's name, in the body face at weight 600, as the design system
  * draws the workflow's name.
- * At rest it is plain text, and the hover wash shows that a click renames it.
+ * At rest it is plain text, and the fill of a hover shows that a click
+ * renames it.
  * While the user renames the board, a field takes its place, at its size and
- * weight, with the accent edge and the focus ring.
+ * weight, with the edge and the focus outline in ring.
  */
 .blockr-dock-bar-name {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 8px;
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 2);
   border: 0;
-  border-radius: var(--blockr-radius-md, 6px);
+  border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-card-foreground);
   font: inherit;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--bk-text-base);
+  font-weight: 600;
 }
 
 button.blockr-dock-bar-name {
@@ -1074,26 +975,27 @@ button.blockr-dock-bar-name {
 }
 
 button.blockr-dock-bar-name:hover {
-  background: var(--blockr-dock-bg-hover);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-dock-bar-field {
   box-sizing: border-box;
   width: 16rem;
   max-width: 40vw;
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--blockr-dock-border-accent);
-  border-radius: var(--blockr-radius-md, 6px);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 2);
+  border: 1px solid var(--bk-color-ring);
+  border-radius: calc(var(--bk-radius) * 0.8);
+  background: transparent;
+  color: inherit;
   font: inherit;
-  font-size: var(--blockr-font-size-base, 0.875rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--bk-text-base);
+  font-weight: 600;
 }
 
 .blockr-dock-bar-field:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 
@@ -1105,7 +1007,7 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-bar-storage {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: calc(var(--bk-spacing) * 1);
 }
 
 .blockr-dock-bar-storage > * {
@@ -1116,10 +1018,10 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-bar-status {
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 4px;
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 1);
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-xs);
 }
 
 /* The read-only pill, a status that no pointer acts on, as today's. */
@@ -1127,14 +1029,14 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  background: var(--blockr-dock-bg-subtle);
-  color: var(--blockr-dock-text-secondary);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  gap: calc(var(--bk-spacing) * 1.5);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 2.5);
+  border: 1px solid var(--bk-color-border);
+  border-radius: 999px;
+  background: var(--bk-color-muted);
+  color: var(--bk-color-muted-foreground);
+  font-weight: 500;
   white-space: nowrap;
   cursor: default;
   user-select: none;
@@ -1161,9 +1063,9 @@ button.blockr-dock-bar-name:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  color: var(--blockr-dock-text-warning);
+  width: calc(var(--bk-spacing) * 7.5);
+  height: calc(var(--bk-spacing) * 7.5);
+  color: var(--bk-color-warning-text);
 }
 
 /*
@@ -1175,15 +1077,16 @@ button.blockr-dock-bar-name:hover {
  * draws the R, each by its place, --i, as today's logo turns.
  * As soon as the work ends, the class goes, and the logo is whole again rather
  * than frozen half drawn.
- * The logo's green is blockr.ui's --blockr-logo.
+ * The logo takes the brand colour, primary, which an app's theme makes its
+ * own.
  */
 .blockr-dock-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
-  padding: 0 5px;
-  color: var(--blockr-dock-logo);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 1);
+  color: var(--bk-color-primary);
 }
 
 .blockr-dock-logo-mark {
@@ -1200,13 +1103,13 @@ button.blockr-dock-bar-name:hover {
 }
 
 /*
- * A square is pale for the first half of its cycle and green for the second,
- * so the R comes down and builds up again in stroke order.
+ * A square is pale for the first half of its cycle and in the logo's colour
+ * for the second, so the R comes down and builds up again in stroke order.
  */
 @keyframes blockr-dock-logo-fill {
   0%,
   47% {
-    fill: color-mix(in srgb, currentColor 16%, var(--blockr-dock-bg-surface));
+    fill: color-mix(in oklab, currentColor 16%, var(--bk-color-card));
   }
 
   53%,
@@ -1254,7 +1157,7 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-views-button {
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-card-foreground);
 }
 
 .blockr-dock-views-button .blockr-dock-bar-label {
@@ -1262,24 +1165,24 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-views-button .blockr-dock-chevron {
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 
 .blockr-dock-views-button:hover .blockr-dock-chevron {
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-dock-bar-rule {
   flex: none;
   width: 1px;
-  height: 20px;
-  margin: 0 2px 0 12px;
-  background: var(--blockr-dock-border);
+  height: calc(var(--bk-spacing) * 5);
+  margin: 0 calc(var(--bk-spacing) * 0.5) 0 calc(var(--bk-spacing) * 3);
+  background: var(--bk-color-border);
 }
 
 /*
  * The line of tabs, while the board option view_tabs is on: across the bar,
- * under its row, 39 pixels high with the rule above it, as today's.
+ * under its row, 40 pixels high with the rule above it, which the tabs fill.
  * It holds the tabs, then the menu as a chevron alone.
  * The tabs scroll sideways where they outgrow the line, without a scrollbar.
  */
@@ -1289,32 +1192,32 @@ button.blockr-dock-bar-name:hover {
   bottom: 0;
   left: 0;
   box-sizing: border-box;
-  gap: 8px;
-  height: 39px;
-  padding: 0 12px;
-  border-top: 1px solid var(--blockr-dock-border);
+  gap: calc(var(--bk-spacing) * 2);
+  height: calc(var(--bk-spacing) * 10);
+  padding: 0 calc(var(--bk-spacing) * 3);
+  border-top: 1px solid var(--bk-color-border);
 }
 
 .blockr-dock-tabs {
   display: flex;
   flex: 1 1 0;
   min-width: 0;
-  height: 38px;
-  margin-left: -4px;
+  height: 100%;
+  margin-left: calc(var(--bk-spacing) * -1);
   overflow-x: auto;
   scrollbar-width: none;
 }
 
 .blockr-dock-views-chevron {
   justify-content: center;
-  width: 30px;
+  width: calc(var(--bk-spacing) * 7.5);
   padding: 0;
 }
 
 /*
- * A tab: its name in the muted colour, which takes the hover wash.
+ * A tab: its name in muted-foreground, which takes the fill of a hover.
  * The tab of the active view, or of the folder that holds it, takes the
- * default colour at weight 600, over a line in the accent colour.
+ * card's text at weight 600, over a line in the brand colour, primary.
  * A folder's tab follows its name with the chevron, which flips up while the
  * folder's menu is open.
  */
@@ -1322,38 +1225,38 @@ button.blockr-dock-bar-name:hover {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 4px;
-  padding: 0 12px;
+  gap: calc(var(--bk-spacing) * 1);
+  padding: 0 calc(var(--bk-spacing) * 3);
   border: 0;
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .blockr-dock-tab:hover,
 .blockr-dock-tab[aria-expanded="true"] {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-dock-tab[aria-current] {
-  color: var(--blockr-dock-text);
-  font-weight: var(--blockr-font-weight-semibold, 600);
-  box-shadow: inset 0 -2px 0 var(--blockr-dock-border-accent);
+  color: var(--bk-color-card-foreground);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--bk-color-primary);
 }
 
 .blockr-dock-tab:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: -2px;
 }
 
 .blockr-dock-tab .blockr-dock-chevron {
   flex: none;
-  color: var(--blockr-dock-text-muted);
-  transition: transform var(--blockr-transition, 0.15s ease);
+  color: var(--bk-color-muted-foreground);
+  transition: transform 0.15s ease;
 }
 
 .blockr-dock-tab[aria-expanded="true"] .blockr-dock-chevron {
@@ -1377,32 +1280,33 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-height: 34px;
-  padding: 0 4px 0 calc(4px + var(--depth, 0) * 16px);
-  border-radius: var(--blockr-radius-sm, 4px);
+  gap: calc(var(--bk-spacing) * 1);
+  min-height: calc(var(--bk-spacing) * 8);
+  padding: 0 calc(var(--bk-spacing) * 1);
+  padding-left: calc(var(--bk-spacing) * 1 + var(--depth, 0) * var(--bk-spacing) * 4);
+  border-radius: calc(var(--bk-radius) * 0.6);
 }
 
 /* The room of a folder's chevron, which a view's row leaves. */
 .blockr-dock-views-slot {
   flex: none;
-  width: 22px;
+  width: calc(var(--bk-spacing) * 6);
 }
 
+/*
+ * The grip, which a row can always be dragged by, in muted-foreground at full
+ * strength, as the row's other icons are at rest.
+ */
 .blockr-dock-views-grip {
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
   width: 14px;
-  height: 22px;
-  color: var(--blockr-dock-text-disabled);
+  height: calc(var(--bk-spacing) * 6);
+  color: var(--bk-color-muted-foreground);
   cursor: grab;
   touch-action: none;
-}
-
-.blockr-dock-views-managed:hover .blockr-dock-views-grip {
-  color: var(--blockr-dock-text-muted);
 }
 
 .blockr-dock-views-managed[data-dragging] {
@@ -1415,24 +1319,24 @@ button.blockr-dock-bar-name:hover {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: calc(var(--bk-spacing) * 6);
+  height: calc(var(--bk-spacing) * 6);
   padding: 0;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
 }
 
 .blockr-dock-views-fold:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 /* A folder's chevron points right while it is closed, and down while open. */
 .blockr-dock-views-fold .blockr-dock-chevron {
-  transition: transform var(--blockr-transition, 0.15s ease);
+  transition: transform 0.15s ease;
 }
 
 .blockr-dock-views-fold[aria-expanded="false"] .blockr-dock-chevron {
@@ -1440,17 +1344,19 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-views-remove:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text-danger);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-destructive-text);
 }
 
 .blockr-dock-views-name {
   flex: 1 1 auto;
+  box-sizing: border-box;
   min-width: 0;
+  height: calc(var(--bk-spacing) * 6);
   overflow: hidden;
-  padding: 2px 7px;
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 1px solid transparent;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -1461,8 +1367,8 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-views-name:hover {
-  border-color: var(--blockr-dock-border);
-  background: var(--blockr-dock-bg-field);
+  border-color: var(--bk-color-border);
+  background: var(--bk-color-muted);
 }
 
 /*
@@ -1474,12 +1380,12 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   width: 0;
   min-width: 0;
-  height: 26px;
-  padding: 0 7px;
-  border: 1px solid var(--blockr-dock-border-accent);
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
+  height: calc(var(--bk-spacing) * 6);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
+  border: 1px solid var(--bk-color-ring);
+  border-radius: calc(var(--bk-radius) * 0.6);
+  background: transparent;
+  color: inherit;
   font: inherit;
 }
 
@@ -1490,19 +1396,19 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-views-confirm:focus-visible,
 .blockr-dock-views-add:focus-visible,
 .blockr-dock-views-done:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 
 /*
- * A row that asks whether to remove its view or folder, on the danger wash,
- * with a Remove button, as today's.
+ * A row that asks whether to remove its view or folder, on the tint of
+ * destructive, with a Remove button, as today's.
  */
 .blockr-dock-views-managed[data-confirming] {
-  gap: 8px;
-  padding-left: calc(10px + var(--depth, 0) * 16px);
-  background: var(--blockr-dock-bg-danger);
-  color: var(--blockr-dock-text-danger);
+  gap: calc(var(--bk-spacing) * 2);
+  padding-left: calc(var(--bk-spacing) * 2.5 + var(--depth, 0) * var(--bk-spacing) * 4);
+  background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
+  color: var(--bk-color-destructive-text);
 }
 
 .blockr-dock-views-confirm-text {
@@ -1515,35 +1421,35 @@ button.blockr-dock-bar-name:hover {
 
 .blockr-dock-views-confirm {
   flex: none;
-  height: 26px;
-  padding: 0 9px;
-  border: 1px solid var(--blockr-dock-border-danger-subtle);
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text-danger);
+  height: calc(var(--bk-spacing) * 6);
+  padding: 0 calc(var(--bk-spacing) * 2);
+  border: 1px solid color-mix(in oklab, var(--bk-color-destructive) 35%, transparent);
+  border-radius: calc(var(--bk-radius) * 0.6);
+  background: var(--bk-color-popover);
+  color: var(--bk-color-destructive-text);
   font: inherit;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-size: var(--bk-text-xs);
+  font-weight: 500;
   cursor: pointer;
 }
 
 .blockr-dock-views-confirm:hover {
-  border-color: var(--blockr-dock-border-danger);
+  border-color: var(--bk-color-destructive);
 }
 
 /*
- * Where a drag would land: a line in the accent colour above or below a row,
- * which starts at the depth of the place, or the accent wash on the row of
- * the folder that takes the view or folder.
+ * Where a drag would land: a line in the brand colour, primary, above or
+ * below a row, which starts at the depth of the place, or the wash of primary
+ * on the row of the folder that takes the view or folder.
  */
 .blockr-dock-views-managed[data-drop="above"]::before,
 .blockr-dock-views-managed[data-drop="below"]::after {
   position: absolute;
-  right: 4px;
-  left: calc(22px + var(--drop-depth, 0) * 16px);
+  right: calc(var(--bk-spacing) * 1);
+  left: calc(14px + var(--bk-spacing) * 2 + var(--drop-depth, 0) * var(--bk-spacing) * 4);
   height: 2px;
-  border-radius: 1px;
-  background: var(--blockr-dock-border-accent);
+  border-radius: 999px;
+  background: var(--bk-color-primary);
   content: "";
   pointer-events: none;
 }
@@ -1557,8 +1463,8 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-views-managed[data-drop="into"] {
-  background: var(--blockr-dock-bg-accent-subtle);
-  box-shadow: inset 0 0 0 1px var(--blockr-dock-border-accent);
+  background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
+  box-shadow: inset 0 0 0 1px var(--bk-color-primary);
 }
 
 /*
@@ -1568,54 +1474,54 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-views-foot {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 4px 0 6px;
+  gap: calc(var(--bk-spacing) * 2);
+  padding: 0 calc(var(--bk-spacing) * 1) 0 calc(var(--bk-spacing) * 1.5);
 }
 
 .blockr-dock-views-add {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 4px;
+  gap: calc(var(--bk-spacing) * 1.5);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 1);
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .blockr-dock-views-add:hover {
-  color: var(--blockr-dock-text);
+  color: var(--bk-color-popover-foreground);
 }
 
 .blockr-dock-views-done {
   flex: none;
-  height: 26px;
+  height: calc(var(--bk-spacing) * 6);
   margin-left: auto;
-  padding: 0 10px;
-  border: 1px solid var(--blockr-dock-border-accent-subtle);
-  border-radius: var(--blockr-radius-sm, 4px);
-  background: var(--blockr-dock-bg-accent-subtle);
-  color: var(--blockr-dock-text-accent);
+  padding: 0 calc(var(--bk-spacing) * 2.5);
+  border: 1px solid color-mix(in oklab, var(--bk-color-primary) 35%, transparent);
+  border-radius: calc(var(--bk-radius) * 0.6);
+  background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
+  color: var(--bk-color-primary-text);
   font: inherit;
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-size: var(--bk-text-xs);
+  font-weight: 500;
   cursor: pointer;
 }
 
 .blockr-dock-views-done:hover {
-  border-color: var(--blockr-dock-border-accent);
+  border-color: var(--bk-color-primary);
 }
 
 /*
  * The options sidebar (./options-sidebar.tsx), a side panel of blockr.ui's
  * design system, as today's: 420 pixels wide, or the window's width where the
  * window is narrower, at the window's right edge from its top to its bottom,
- * on the surface, with the default edge on its left and a shadow cast to the
- * left, in the side panel's layer, above the bar and below the toasts.
+ * a card with the default edge on its left and the shadow of a sheet, in the
+ * side panel's layer, above the bar and below the toasts.
  * It slides in from the edge as it opens and out as it closes, but for a
  * reader who asks for less motion.
  * Closed, it is inert from the start, and hidden once it has slid out.
@@ -1625,16 +1531,16 @@ button.blockr-dock-bar-name:hover {
   top: 0;
   right: 0;
   bottom: 0;
-  z-index: var(--blockr-z-offcanvas, 1045);
+  z-index: 1045;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   width: min(420px, 100vw);
-  border-left: 1px solid var(--blockr-dock-border);
-  background: var(--blockr-dock-bg-surface);
-  color: var(--blockr-dock-text);
-  box-shadow: -8px 0 24px rgb(15 23 42 / 0.08);
-  font-size: var(--blockr-font-size-base, 0.875rem);
+  border-left: 1px solid var(--bk-color-border);
+  background: var(--bk-color-card);
+  color: var(--bk-color-card-foreground);
+  box-shadow: var(--bk-shadow-lg);
+  font-size: var(--bk-text-base);
   transform: translateX(100%);
   visibility: hidden;
   transition:
@@ -1663,26 +1569,27 @@ button.blockr-dock-bar-name:hover {
 /*
  * The header, 48 pixels high with the rule under it, as the bar is, so that
  * the two rules run on one line where the sidebar sits beside the bar: the
- * title, 20 pixels from the edge, and the pin and close buttons.
+ * title, 16 pixels from the edge, as the body's content is, and the pin and
+ * close buttons.
  */
 .blockr-dock-sidebar-header {
   flex: none;
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 48px;
-  padding: 0 14px 0 20px;
-  border-bottom: 1px solid var(--blockr-dock-border);
+  gap: calc(var(--bk-spacing) * 1);
+  height: calc(var(--bk-spacing) * 12);
+  padding: 0 calc(var(--bk-spacing) * 3) 0 calc(var(--bk-spacing) * 4);
+  border-bottom: 1px solid var(--bk-color-border);
 }
 
 .blockr-dock-sidebar-title {
   flex: 1 1 auto;
   min-width: 0;
-  margin: 0 8px 0 0;
+  margin: 0 calc(var(--bk-spacing) * 2) 0 0;
   overflow: hidden;
-  font-size: var(--blockr-font-size-lg, 1rem);
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-size: var(--bk-text-lg);
+  font-weight: 600;
   line-height: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1690,7 +1597,7 @@ button.blockr-dock-bar-name:hover {
 
 /*
  * The pin and the close button: quiet icon buttons of the design system at
- * its size xs, in the muted colour, which take the hover wash.
+ * its size xs, in muted-foreground, which take the fill of a hover.
  */
 .blockr-dock-sidebar-button {
   flex: none;
@@ -1698,60 +1605,60 @@ button.blockr-dock-bar-name:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--blockr-control-h-xs, 26px);
-  height: var(--blockr-control-h-xs, 26px);
+  width: calc(var(--bk-spacing) * 6);
+  height: calc(var(--bk-spacing) * 6);
   padding: 0;
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   cursor: pointer;
   transition:
-    background-color var(--blockr-transition, 0.15s ease),
-    color var(--blockr-transition, 0.15s ease);
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .blockr-dock-sidebar-button:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-dock-sidebar-button:focus-visible,
 .blockr-dock-sidebar-expand:focus-visible,
 .blockr-dock-sidebar-summary:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: -2px;
 }
 
 /*
  * The button that expands or collapses every category: a quiet text button of
- * the design system at its size xs, in 13px, in the muted colour, which takes
- * the hover wash.
+ * the design system at its size xs, in the small size of text, in
+ * muted-foreground, which takes the fill of a hover.
  */
 .blockr-dock-sidebar-expand {
   flex: none;
   box-sizing: border-box;
-  height: var(--blockr-control-h-xs, 26px);
-  margin-right: 4px;
-  padding: 0 8px;
+  height: calc(var(--bk-spacing) * 6);
+  margin-right: calc(var(--bk-spacing) * 1);
+  padding: 0 calc(var(--bk-spacing) * 2);
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  font-weight: var(--blockr-font-weight-medium, 500);
+  font-size: var(--bk-text-sm);
+  font-weight: 500;
   cursor: pointer;
 }
 
 .blockr-dock-sidebar-expand:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 /*
- * The pin leans while the sidebar floats, and stands upright on the selected
- * wash, in the strong accent colour, while it is pinned, as today's.
+ * The pin leans while the sidebar floats, and stands upright on the wash of
+ * primary, in primary-text, while it is pinned, as today's.
  */
 .blockr-dock-sidebar-pin svg {
   transform: rotate(45deg);
@@ -1759,8 +1666,8 @@ button.blockr-dock-bar-name:hover {
 }
 
 .blockr-dock-sidebar-pin[aria-pressed="true"] {
-  background: var(--blockr-dock-bg-selected);
-  color: var(--blockr-dock-text-accent-strong);
+  background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
+  color: var(--bk-color-primary-text);
 }
 
 .blockr-dock-sidebar-pin[aria-pressed="true"] svg {
@@ -1775,7 +1682,7 @@ button.blockr-dock-bar-name:hover {
 
 /*
  * The body, which scrolls where what it holds outgrows the window.
- * Its content starts 20 pixels from the edge, and 16 pixels below the header,
+ * Its content starts 16 pixels from the edge, and 16 pixels below the header,
  * through margins of what it holds rather than its own padding, since a summary
  * that stays at the top while the body scrolls would stay below that padding.
  */
@@ -1783,32 +1690,32 @@ button.blockr-dock-bar-name:hover {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 0 20px;
+  padding: 0 calc(var(--bk-spacing) * 4);
 }
 
 /*
  * The categories, an accordion of `details` elements, each a card as core's
  * Edit board plugin draws each of its sections beside the sidebar: a 1px edge
- * in `border-default` at a radius of 6, 12 pixels from the next card.
+ * in border at the medium radius, 12 pixels from the next card.
  * A category's summary is the card's header, 12 pixels from the edges, with
  * the category's name at weight 600 and the count of its board options in a
  * pill with an edge, as the plugin draws its sections' counts.
  * The chevron goes at the header's end, and flips up while the category is
  * expanded.
  * While the body scrolls, the summary of an expanded category stays at its
- * top, on the surface, so that what scrolls under it does not show through.
+ * top, on the card, so that what scrolls under it does not show through.
  * The card clips what it holds to its rounded corners, but clips rather than
  * scrolls, so that the summary still stays at the body's top.
  */
 .blockr-dock-sidebar-categories {
   display: grid;
-  gap: 12px;
-  margin: 16px 0;
+  gap: calc(var(--bk-spacing) * 3);
+  margin: calc(var(--bk-spacing) * 4) 0;
 }
 
 .blockr-dock-sidebar-category {
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-md, 6px);
+  border: 1px solid var(--bk-color-border);
+  border-radius: calc(var(--bk-radius) * 0.8);
   overflow: clip;
 }
 
@@ -1819,10 +1726,10 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 12px;
-  background: var(--blockr-dock-bg-surface);
+  gap: calc(var(--bk-spacing) * 2);
+  min-height: calc(var(--bk-spacing) * 8);
+  padding: 0 calc(var(--bk-spacing) * 3);
+  background: var(--bk-color-card);
   list-style: none;
   cursor: pointer;
 }
@@ -1834,34 +1741,37 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-sidebar-summary:hover,
 .blockr-dock-sidebar-summary:focus-visible {
   background:
-    linear-gradient(var(--blockr-dock-bg-hover), var(--blockr-dock-bg-hover)),
-    var(--blockr-dock-bg-surface);
+    linear-gradient(var(--bk-color-accent), var(--bk-color-accent)),
+    var(--bk-color-card);
 }
 
 .blockr-dock-sidebar-summary-name {
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
-  font-weight: var(--blockr-font-weight-semibold, 600);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .blockr-dock-sidebar-count {
   flex: none;
-  padding: 0 6px;
-  border: 1px solid var(--blockr-dock-border);
-  border-radius: var(--blockr-radius-pill, 999px);
-  color: var(--blockr-dock-text-muted);
-  font-size: var(--blockr-font-size-xs, 0.75rem);
-  line-height: 16px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: calc(var(--bk-spacing) * 5);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
+  border: 1px solid var(--bk-color-border);
+  border-radius: 999px;
+  color: var(--bk-color-muted-foreground);
+  font-size: var(--bk-text-xs);
   font-variant-numeric: tabular-nums;
 }
 
 .blockr-dock-sidebar-summary .blockr-dock-chevron {
   flex: none;
   margin-left: auto;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
 }
 
 .blockr-dock-sidebar-category[open] > .blockr-dock-sidebar-summary .blockr-dock-chevron {
@@ -1915,10 +1825,10 @@ button.blockr-dock-bar-name:hover {
  * A rule parts each row from the one before, from edge to edge of the card,
  * as rules part the rows of the Edit board plugin's tables, so that it shows
  * where one board option ends and the next starts.
- * The rules are 1px in `border-default`.
+ * The rules are 1px in border.
  */
 .blockr-dock-sidebar-options {
-  border-top: 1px solid var(--blockr-dock-border);
+  border-top: 1px solid var(--bk-color-border);
 }
 
 /*
@@ -1927,41 +1837,41 @@ button.blockr-dock-bar-name:hover {
  */
 .blockr-dock-sidebar-option {
   position: relative;
-  padding: 12px;
+  padding: calc(var(--bk-spacing) * 3);
 }
 
 .blockr-dock-sidebar-option + .blockr-dock-sidebar-option {
-  border-top: 1px solid var(--blockr-dock-border);
+  border-top: 1px solid var(--bk-color-border);
 }
 
 .blockr-dock-sidebar-reset {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 0 6px;
+  top: calc(var(--bk-spacing) * 3);
+  right: calc(var(--bk-spacing) * 3);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 0;
-  border-radius: var(--blockr-radius-sm, 4px);
+  border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
-  color: var(--blockr-dock-text-muted);
+  color: var(--bk-color-muted-foreground);
   font: inherit;
-  font-size: var(--blockr-font-size-sm, 0.8125rem);
-  line-height: 20px;
+  font-size: var(--bk-text-sm);
+  line-height: calc(var(--bk-spacing) * 5);
   cursor: pointer;
 }
 
 .blockr-dock-sidebar-reset:hover {
-  background: var(--blockr-dock-bg-hover);
-  color: var(--blockr-dock-text);
+  background: var(--bk-color-accent);
+  color: var(--bk-color-accent-foreground);
 }
 
 .blockr-dock-sidebar-reset:focus-visible {
-  outline: 2px solid var(--blockr-dock-border-accent);
+  outline: 2px solid var(--bk-color-ring);
   outline-offset: 1px;
 }
 
 .blockr-dock-sidebar-note {
-  margin: 16px 0;
-  color: var(--blockr-dock-text-muted);
+  margin: calc(var(--bk-spacing) * 4) 0;
+  color: var(--bk-color-muted-foreground);
 }
 
 /*

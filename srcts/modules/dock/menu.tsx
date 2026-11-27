@@ -1,9 +1,11 @@
 // The dock's menus, drawn as the design system's menus are
 // (https://github.com/BristolMyersSquibb/blockr.ui/blob/e14e8310481e98b156871bf96669b41cb88c8435/vignettes/articles/design-system.Rmd#L1062-L1165):
 // the menus of the bar (./navbar.tsx) and the views menu (./views-menu.tsx).
-// The dock draws them itself, since blockr.ui gives the client no menus yet.
-// The block's menu of a card and the dock's pickers are core's React SDK's
-// instead (./card/header.tsx, ./picker.tsx).
+// The dock draws them itself, as it did before blockr.ui gave the client
+// menus, until it draws them as a tree of blockr.ui
+// (https://github.com/BristolMyersSquibb/blockr.dock/issues/647).
+// The block's menu of a card and the dock's pickers are blockr.ui's instead
+// (./card/header.tsx, ./picker.tsx).
 //
 // A menu is a popover, which the browser draws in the top layer, so that
 // nothing on the page clips it, and which it closes as the user clicks

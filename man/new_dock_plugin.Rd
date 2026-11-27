@@ -103,6 +103,12 @@ An app script gives the items of the dock's navbar to \code{serve()} in
 The dock takes them through its method of \code{\link[blockr.core:frontend_args]{blockr.core::frontend_args()}}
 (see \code{\link[=default_navbar]{default_navbar()}}).
 
+The dock draws its cards, its navbar, its options sidebar and the frame of
+its panels with the theme variables of blockr.ui, and keeps the default of
+each, since its look is blockr.ui's.
+So the class has no method of \code{\link[blockr.core:frontend_theme]{blockr.core::frontend_theme()}}, and takes
+core's, which returns a theme with no values.
+
 The dock reads four board options: its own, \code{compact}, \code{view_tabs} and
 \code{sync_rails} (see \code{\link[=new_compact_option]{new_compact_option()}}), and core's \code{dark_mode}.
 The class names them through its method of \code{\link[blockr.core:plugin_options]{blockr.core::plugin_options()}},

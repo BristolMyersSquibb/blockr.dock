@@ -4,9 +4,12 @@
 // - A module, srcts/modules/<name>/index.ts or index.tsx, is bundled into
 //   <name>.js, as the module of the dock plugin's class is into dock.js.
 // - Each takes the build preset that blockr.core ships as `@blockr/core/build`,
-//   which leaves its imports of React and of core's React SDK, its binding and
-//   its controls imports, which the page that R serves resolves through its
-//   import map. So no bundle holds any of them.
+//   which extends blockr.ui's. It leaves its imports of React, of React Aria,
+//   of blockr.ui's components and of core's React SDK, its binding and its
+//   controls imports, which the page that R serves resolves through its
+//   import map. So no bundle holds any of them. It bundles the icons that a
+//   module imports from `@blockr/ui/icons`, for which the import map names no
+//   entry.
 // - The packages that the dock bundles from other projects are those that
 //   package.json lists in `dependencies`: dockview-react and
 //   fractional-indexing. The build bundles them, minified, into a file of
@@ -24,9 +27,17 @@
 //   names the file that holds React, and no browser runs an old copy from its
 //   cache. The license comments of what each holds stay, at its end.
 // - The builds of the modules and of their stylesheets take the vendor check
-//   that blockr.core ships beside the preset. It fails the build where one of
-//   those files would hold code from node_modules. A source that imported
+//   that blockr.ui ships in `@blockr/ui/build`. It fails the build where one
+//   of those files would hold code from node_modules. A source that imported
 //   dockview-core, rather than dockview-react, would fail it.
+// - The dock writes plain CSS and runs no Tailwind, so it runs the check of
+//   the Tailwind half of blockr.ui's preset, themeCheck() of
+//   `@blockr/ui/build`, on the stylesheets that the build writes for its
+//   modules and on its code
+//   (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.7.4#prefixes).
+//   It fails the build where a stylesheet sets a variable under --bk-, or
+//   reads one that blockr.ui's list of theme variables lacks, and where the
+//   code names a class under bk: or a colour of Tailwind's palette.
 // - The JSON Schema of each of the dock's board options, in
 //   srcts/options/schemas.ts, is written beside the board option's module, as
 //   compact-option.schema.json beside compact-option.js, as core's build
@@ -39,7 +50,7 @@
 //   the schema of its class's state, so the build writes it before it
 //   bundles.
 // - What each file that the build writes imports up front goes into
-//   preload.json, by staticImports() from `@blockr/core/build`, as core's
+//   preload.json, by staticImports() from `@blockr/ui/build`, as core's
 //   build writes its own.
 //   R names those files in the head of the page that it serves, as the vendor
 //   files that dock.js and dock.css import.
@@ -55,7 +66,8 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { preset, staticImports, vendorCheck } from "@blockr/core/build";
+import { preset } from "@blockr/core/build";
+import { staticImports, themeCheck, vendorCheck } from "@blockr/ui/build";
 import * as esbuild from "esbuild";
 import { createGenerator } from "ts-json-schema-generator";
 
@@ -79,6 +91,15 @@ async function modules(src: string): Promise<Entry[]> {
   return dirs
     .filter((entry) => entry.isDirectory())
     .map((entry) => ({ name: entry.name, dir: join(dir, entry.name) }));
+}
+
+// The dock's code: each TypeScript file in `src`, by its path, in order.
+async function sources(src: string): Promise<string[]> {
+  const files = await readdir(src, { recursive: true });
+  return files
+    .filter((file) => /\.tsx?$/.test(file))
+    .map((file) => join(src, file))
+    .sort();
 }
 
 // The packages that the build bundles into the vendor files, by their names:
@@ -156,6 +177,11 @@ export async function build(root: string): Promise<string[]> {
   if (results.some((result) => result.warnings.length > 0)) {
     throw new Error("esbuild warned, as printed above");
   }
+
+  await themeCheck({
+    stylesheets: stylesheets.map((sheet) => join(out, `${sheet.out}.css`)),
+    code: await sources(join(root, "srcts")),
+  });
 
   return [
     ...results.flatMap((result) => Object.keys(result.metafile.outputs)),

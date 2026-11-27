@@ -25,6 +25,7 @@ Imports:
     blockr.core (>= 0.2.0),
     utils
 Suggests:
+    blockr.ui (>= 0.2.0),
     testthat (>= 3.0.0),
     withr,
     knitr,
@@ -34,7 +35,8 @@ Suggests:
     chromote,
     yyjsonr
 Remotes:
-    BristolMyersSquibb/blockr.core@js-state
+    BristolMyersSquibb/blockr.core@js-state,
+    BristolMyersSquibb/blockr.ui@js-state
 Config/testthat/edition: 3
 VignetteBuilder: quarto
 Config/roxygen2/version: 8.1.0
