@@ -8,13 +8,14 @@ import { fileURLToPath } from "node:url";
 import type { CoreApi, JsonBoard, PluginModule } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import { themeVariables } from "@blockr/ui/build";
+import { expectedErrors } from "@blockr/ui/stubs";
 import { themeLightSpaced } from "dockview-react";
 import { act } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import { defaultState } from "../../state/index.ts";
 import type { DockState, Grid, Panel } from "../../state/index.ts";
 import * as dock from "./index.tsx";
-import { DOCK, click, drawn, expectedErrors, hello, modules, pressFocused, startDock, typeSearch, waitFor } from "./testing.ts";
+import { DOCK, click, drawn, hello, modules, pressFocused, startDock, typeSearch, waitFor } from "./testing.ts";
 import { FADES_FOR, SHOWN_FOR } from "./toasts.tsx";
 // The fixture of a board that R writes for a dock app script is a file of the
 // R package, which R's suite checks too.

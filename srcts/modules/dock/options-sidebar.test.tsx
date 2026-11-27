@@ -14,7 +14,7 @@ import { reactModule, useValue } from "@blockr/core/react";
 import type { ModuleProps } from "@blockr/core/react";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import { Button, ComboBox, ComboBoxItem, Menu, MenuItem, MenuTrigger } from "@blockr/ui";
-import { find, listFromField, menuItem, openMenu, optionFromLabel } from "@blockr/ui/stubs";
+import { expectedErrors, find, listFromField, menuItem, openMenu, optionFromLabel } from "@blockr/ui/stubs";
 import { act } from "react";
 import type { ReactElement } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
@@ -22,7 +22,7 @@ import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
-import { blockModules, click, drawn, expectedErrors, pressFocused, typeInto, waitFor } from "./testing.ts";
+import { blockModules, click, drawn, pressFocused, typeInto, waitFor } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";

@@ -9,13 +9,14 @@
 
 import type { CoreApi, Json, LogLine, PluginClass, StorageControl } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
+import { expectedErrors } from "@blockr/ui/stubs";
 import { act } from "react";
 import { beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
-import { blockModules, click, drawn, expectedErrors, pressOn, typeInto } from "./testing.ts";
+import { blockModules, click, drawn, pressOn, typeInto } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";

@@ -7,8 +7,9 @@ export default defineConfig({
   test: {
     environment: "happy-dom",
     include: ["srcts/**/*.test.{ts,tsx}"],
-    // A test fails where React warns of an update outside act().
-    setupFiles: ["./vitest.setup.ts"],
+    // A test fails on an error or a warning that it prints, with the setup
+    // that blockr.ui offers packages.
+    setupFiles: ["@blockr/ui/stubs/setup"],
     // The typescript job of blockr.ci uploads coverage/lcov.info to Codecov.
     // The lcov reporter writes that file, and an HTML report beside it in
     // coverage/lcov-report.
