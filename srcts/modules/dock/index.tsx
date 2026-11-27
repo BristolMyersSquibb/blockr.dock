@@ -1,4 +1,4 @@
-// The module of the dock plugin's class, blockr.dock-dock_plugin, which
+// The module of the dock plugin's class, dock_plugin of blockr.dock, which
 // blockr.dock lists in R with the class's id. Its default export is the class
 // without its id, whose `frontend` core calls with the page's element
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.12#the-frontend).
@@ -17,7 +17,7 @@
 // The build generates the schema from the state's types, and the default
 // holds no view.
 // The class also gives core the dock's commands, which ../../commands defines
-// and core registers with the class.
+// and core registers with the class, under its package.
 //
 // The frontend's render() takes these steps, which core awaits before it
 // starts the scheduler
@@ -51,9 +51,11 @@
 // starting, which is the board's.
 //
 // As a plugin asks to show a block or a plugin through core's show(), the
-// frontend's show() runs the dock's command blockr.dock-show_panel with the
-// board object, which names the panel as a grid names it
+// frontend's show() runs the dock's command show_panel with the board object,
+// which names the panel as a grid names it
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.4#showing-a-panel).
+// The board object names a plugin by the Id of its class, which the command's
+// args hold as the record that the Id serializes as.
 // The command has the active view show the panel, and takes no undo step.
 // Where the command fails its preflight, as on a locked board whose active
 // view lacks the panel, show() shows nothing, while core has given the block
@@ -68,6 +70,7 @@ import type { FrontendModule, JsonSchema, PluginClass } from "@blockr/core";
 import schema from "../../../inst/js/dock.schema.json" with { type: "json" };
 import { dockCommands } from "../../commands/index.ts";
 import { defaultState, update } from "../../state/index.ts";
+import type { Panel } from "../../state/index.ts";
 import { API } from "./api.ts";
 import { trackBusy } from "./busy.ts";
 import { createTooltips } from "./card/index.ts";
@@ -87,9 +90,6 @@ import { drawnPlugins, startOnBoard, urlView } from "./start.ts";
 import { createToasts, ToastList } from "./toasts.tsx";
 
 export const api = API;
-
-// The command through which the frontend shows a panel.
-const SHOW_PANEL = "blockr.dock-show_panel";
 
 const frontend = {
   async render({ el, core, plugin, signal, args }) {
@@ -144,9 +144,10 @@ const frontend = {
     };
   },
   async show({ object, core }) {
-    const args = { panel: object };
-    if (!core.commands.preflight(SHOW_PANEL, args)) return;
-    await core.commands.run(SHOW_PANEL, args);
+    const panel: Panel = object;
+    const show = core.id("blockr.dock", "show_panel");
+    if (!core.commands.preflight(show, { panel })) return;
+    await core.commands.run(show, { panel });
   },
 } satisfies FrontendModule;
 

@@ -20,7 +20,7 @@ interface SetSections {
 
 export const sectionCommands = [
   command<SetSections>({
-    id: "blockr.dock-set_sections",
+    id: "set_sections",
     label: "Set card sections",
     description:
       "Sets the sections of a block's card that show: its inputs, its outputs, both, or neither. A card shows both unless this sets it otherwise.",

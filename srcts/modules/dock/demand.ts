@@ -29,6 +29,7 @@ import { dockState } from "../../commands/index.ts";
 import { gridToLayout, layoutToGrid } from "../../layout/index.ts";
 import { EDGES, tabGroups } from "../../state/index.ts";
 import type { Panel } from "../../state/index.ts";
+import { panelClass } from "./context.ts";
 import type { Narrow } from "./narrow.ts";
 
 // The owner of the demand, and its evaluation priority.
@@ -38,7 +39,10 @@ export const SHOWN = 1;
 // The blocks and the plugins whose panels are on screen, as CoreApi's
 // onScreen takes them, on a board where the dock draws the panels of the
 // plugins given, by the ids of their classes.
+// It makes the Id of each plugin that the state names with core.id(), as core
+// finds a plugin by it.
 export function onScreen(
+  core: Pick<CoreApi, "id">,
   board: Board,
   drawn: ReadonlyMap<PluginClassId, string>,
   narrow: boolean,
@@ -48,7 +52,7 @@ export function onScreen(
   const view = active === null ? undefined : state?.views[active];
   if (view === undefined) return { blocks: [], plugins: [] };
 
-  const title = (panel: Panel) => ("block" in panel ? board.blocks[panel.block]?.name : drawn.get(panel.plugin));
+  const title = (panel: Panel) => ("block" in panel ? board.blocks[panel.block]?.name : drawn.get(panelClass(core, panel)));
   const grid = layoutToGrid(gridToLayout(view.grid, title, { width: 0, height: 0 }));
   const shown = [
     ...tabGroups(grid).map((group) => group.active),
@@ -59,7 +63,7 @@ export function onScreen(
   ];
   return {
     blocks: shown.flatMap((panel) => ("block" in panel ? [panel.block] : [])),
-    plugins: shown.flatMap((panel) => ("plugin" in panel ? [panel.plugin] : [])),
+    plugins: shown.flatMap((panel) => ("plugin" in panel ? [panelClass(core, panel)] : [])),
   };
 }
 
@@ -68,14 +72,14 @@ export function onScreen(
 // The narrow column shows the panels of collapsed rails too, so the demand
 // takes the blocks again as the window crosses the breakpoint.
 export function demandShown(
-  core: Pick<CoreApi, "scheduler" | "store" | "onScreen">,
+  core: Pick<CoreApi, "id" | "scheduler" | "store" | "onScreen">,
   drawn: ReadonlyMap<PluginClassId, string>,
   narrow: Narrow,
 ): () => void {
-  const blocks = () => (board: Board) => onScreen(board, drawn, narrow.get()).blocks;
+  const blocks = () => (board: Board) => onScreen(core, board, drawn, narrow.get()).blocks;
   const demand = core.scheduler.demand(OWNER, blocks(), { priority: SHOWN });
   const tell = (board: Board) => {
-    core.onScreen.set(onScreen(board, drawn, narrow.get()));
+    core.onScreen.set(onScreen(core, board, drawn, narrow.get()));
   };
   tell(core.store.board());
   const offBoard = core.store.subscribe((_change, board) => {

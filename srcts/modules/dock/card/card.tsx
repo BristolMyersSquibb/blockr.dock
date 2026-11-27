@@ -113,7 +113,7 @@ export function BlockCard({ id }: { id: BlockId }): ReactElement | null {
   if (block === undefined) return null;
   const sections = dockState(board)?.visible[id] ?? SECTIONS;
   const compact = core.options.value("compact") === true;
-  const entry = core.blockRegistry()[block.registry_id];
+  const entry = core.blockRegistry().get(block.registry_id);
   const inputs = !core.store.locked(id);
   const hidden = status !== undefined && WITHOUT_OUTPUT.has(status.status);
   const note = status !== undefined && WITH_NOTE.has(status.status) ? status.reason : null;

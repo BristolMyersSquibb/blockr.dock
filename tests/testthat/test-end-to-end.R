@@ -97,7 +97,7 @@ test_that("a tab dropped on the right of its tab group splits the group", {
   # group, and the panels of blocks `a` and `b` in another.
   expect_identical(
     lapply(tab_groups(app_grid(app, "analysis")), group_panels),
-    list("blockr.core-edit_board_plugin", c("a", "b"))
+    list("edit_board_plugin of blockr.core", c("a", "b"))
   )
 
   # The user drags the tab of block `a` onto the right of its own tab group,
@@ -121,7 +121,7 @@ test_that("a tab dropped on the right of its tab group splits the group", {
 
   expect_identical(
     lapply(tab_groups(app_grid(app, "analysis")), group_panels),
-    list("blockr.core-edit_board_plugin", "b", "a")
+    list("edit_board_plugin of blockr.core", "b", "a")
   )
 })
 

@@ -34,7 +34,7 @@ export interface Busy {
 // Follows whether the logo turns, on a board where the dock draws the panels
 // of the plugins given, after a delay in milliseconds.
 export function trackBusy(
-  core: Pick<CoreApi, "store" | "scheduler">,
+  core: Pick<CoreApi, "id" | "store" | "scheduler">,
   drawn: ReadonlyMap<PluginClassId, string>,
   narrow: Narrow,
   delay: number,
@@ -44,7 +44,7 @@ export function trackBusy(
   const listeners = new Set<() => void>();
 
   const evaluating = () =>
-    onScreen(core.store.board(), drawn, narrow.get()).blocks.some((block) => {
+    onScreen(core, core.store.board(), drawn, narrow.get()).blocks.some((block) => {
       const status = core.scheduler.status(block)?.status;
       return status === "stale" || status === "unevaluated";
     });

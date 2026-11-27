@@ -6,16 +6,16 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { CoreApi, JsonBoard, PluginModule } from "@blockr/core";
-import { HELLO, stubCore } from "@blockr/core/stubs";
+import { HELLO, id, stubCore } from "@blockr/core/stubs";
 import { themeVariables } from "@blockr/ui/build";
 import { expectedErrors } from "@blockr/ui/stubs";
 import { themeLightSpaced } from "dockview-react";
 import { act } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
-import { defaultState } from "../../state/index.ts";
-import type { DockState, Grid, Panel } from "../../state/index.ts";
+import { defaultState, idText } from "../../state/index.ts";
+import type { DockState, Grid, IdRecord, Panel } from "../../state/index.ts";
 import * as dock from "./index.tsx";
-import { DOCK, click, drawn, hello, modules, pressFocused, startDock, typeSearch, waitFor } from "./testing.ts";
+import { DOCK, click, drawn, hello, modules, offered, pressFocused, startDock, typeSearch, waitFor } from "./testing.ts";
 import { FADES_FOR, SHOWN_FOR } from "./toasts.tsx";
 // The fixture of a board that R writes for a dock app script is a file of the
 // R package, which R's suite checks too.
@@ -54,8 +54,8 @@ describe("the dock's frontend", () => {
     const { core, settled, stop } = await startDock(el);
     await settled();
 
-    await act(() => core.commands.run("blockr.core-set_option", { id: "sync_rails", value: false }));
-    await act(() => core.commands.run("blockr.core-set_option", { id: "compact", value: true }));
+    await act(() => core.commands.run(id("blockr.core", "set_option"), { id: "sync_rails", value: false }));
+    await act(() => core.commands.run(id("blockr.core", "set_option"), { id: "compact", value: true }));
     await settled();
 
     expect(core.store.board().options).toMatchObject({ compact: true, view_tabs: false, sync_rails: false });
@@ -80,7 +80,7 @@ describe("the dock's frontend", () => {
     const { core, settled, stop } = await startDock(el);
     await settled();
 
-    await act(() => core.commands.run("blockr.core-set_option", { id: "dark_mode", value: "dark" }));
+    await act(() => core.commands.run(id("blockr.core", "set_option"), { id: "dark_mode", value: "dark" }));
     await settled();
     expect(el.querySelector(".blockr-dock .dv-shell")?.classList).toContain("dockview-theme-light-spaced");
     expect(document.documentElement.getAttribute("data-bk-mode")).toBe("dark");
@@ -133,7 +133,7 @@ describe("the dock's frontend", () => {
 
   test("shows no close button on a tab under the board lock", async () => {
     const el = document.createElement("div");
-    const { settled, stop } = await stubCore({ hello: { ...hello, lock: { board: true, load: false } }, modules, el });
+    const { settled, stop } = await stubCore({ hello: { ...hello, lock: { board: true, load: false } }, modules, offered, el });
     await settled();
 
     expect(tabs(el)).not.toHaveLength(0);
@@ -182,8 +182,14 @@ function boardWith(dockState: DockState): JsonBoard {
       id: "curious_otter",
       name: "Curious otter",
       blocks: {
-        a: { registry_id: "blockr.core-dataset_block", version: 1, state: { dataset: "iris", package: "datasets" }, name: "Dataset", locked: null },
-        b: { registry_id: "blockr.core-head_block", version: 1, state: { n: 3, direction: "head" }, name: "Head", locked: null },
+        a: {
+          registry_id: { package: "blockr.core", id: "dataset_block" },
+          version: 1,
+          state: { dataset: "iris", package: "datasets" },
+          name: "Dataset",
+          locked: null,
+        },
+        b: { registry_id: { package: "blockr.core", id: "head_block" }, version: 1, state: { n: 3, direction: "head" }, name: "Head", locked: null },
       },
       links: { ab: { from: "a", to: "b", input: "data" } },
       stacks: { s1: { name: "Input", blocks: ["a", "b"], color: "#ffcc88" } },
@@ -193,7 +199,7 @@ function boardWith(dockState: DockState): JsonBoard {
         view_tabs: { value: false, version: 1, package: "blockr.dock" },
         sync_rails: { value: true, version: 1, package: "blockr.dock" },
       },
-      plugins: { [DOCK]: { state: dockState, version: 1 } },
+      plugins: { [DOCK.package]: { [DOCK.id]: { state: dockState, version: 1 } } },
     },
   };
 }
@@ -222,8 +228,8 @@ const twoViews: DockState = {
         sizes: [1],
         rails: {
           right: {
-            panels: [{ plugin: "blockr.gone-gone_plugin" }],
-            active: { plugin: "blockr.gone-gone_plugin" },
+            panels: [{ plugin: { package: "blockr.gone", id: "gone_plugin" } }],
+            active: { plugin: { package: "blockr.gone", id: "gone_plugin" } },
             collapsed: true,
             size: 300,
           },
@@ -258,8 +264,8 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, board);
     await settled();
 
-    expect(core.store.board().plugins[DOCK]).toEqual(board.board.plugins[DOCK]?.state);
-    expect(core.store.jsonBoard().board.plugins[DOCK]?.version).toBe(1);
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toEqual(board.board.plugins[DOCK.package]?.[DOCK.id]?.state);
+    expect(core.store.jsonBoard().board.plugins[DOCK.package]?.[DOCK.id]?.version).toBe(1);
     stop();
   });
 
@@ -268,7 +274,7 @@ describe("the dock plugin's state", () => {
     await settled();
 
     expect(core.plugins.pluginClass(DOCK).state?.default).toEqual(defaultState);
-    expect(core.store.board().plugins[DOCK]).toEqual(defaultState);
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toEqual(defaultState);
     stop();
   });
 
@@ -276,8 +282,8 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
-    expect(core.store.jsonBoard().board.plugins[DOCK]?.version).toBe(1);
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toEqual(twoViews);
+    expect(core.store.jsonBoard().board.plugins[DOCK.package]?.[DOCK.id]?.version).toBe(1);
     stop();
   });
 
@@ -285,8 +291,8 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    await act(() => core.commands.run("blockr.core-remove_block", { id: "b" }));
-    expect(core.store.board().plugins[DOCK]).toMatchObject({
+    await act(() => core.commands.run(id("blockr.core", "remove_block"), { id: "b" }));
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toMatchObject({
       views: {
         main: { grid: { children: [{ children: [{ panels: [{ block: "a" }] }], sizes: [1] }] } },
         side: { grid: { children: [], sizes: [] } },
@@ -297,7 +303,7 @@ describe("the dock plugin's state", () => {
     act(() => {
       core.store.undo();
     });
-    expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toEqual(twoViews);
     stop();
   });
 
@@ -305,8 +311,8 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    await act(() => core.commands.run("blockr.core-add_block", { registry_id: "blockr.core-head_block", id: "c" }));
-    expect(core.store.board().plugins[DOCK]).toMatchObject({
+    await act(() => core.commands.run(id("blockr.core", "add_block"), { registry_id: { package: "blockr.core", id: "head_block" }, id: "c" }));
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toMatchObject({
       views: { side: { grid: { children: [{ panels: [{ block: "b" }, { block: "c" }], active: { block: "c" } }] } } },
     });
     stop();
@@ -316,8 +322,9 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    await act(() => core.commands.run("blockr.core-set_plugin_state", { plugin: DOCK, patches: [{ op: "remove", path: "/views/side" }] }));
-    expect(core.store.board().plugins[DOCK]).toMatchObject({ active: "main" });
+    const patches = [{ op: "remove", path: "/views/side" }];
+    await act(() => core.commands.run(id("blockr.core", "set_plugin_state"), { plugin: { package: DOCK.package, id: DOCK.id }, patches }));
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toMatchObject({ active: "main" });
     stop();
   });
 
@@ -325,12 +332,12 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    const run = core.commands.run("blockr.core-set_plugin_state", {
-      plugin: DOCK,
+    const run = core.commands.run(id("blockr.core", "set_plugin_state"), {
+      plugin: { package: DOCK.package, id: DOCK.id },
       patches: [{ op: "replace", path: "/views/main/grid/children/0/sizes", value: [0, 1] }],
     });
     await expect(run).rejects.toThrow();
-    expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toEqual(twoViews);
     stop();
   });
 });
@@ -341,7 +348,7 @@ describe("the step on starting", () => {
     await settled();
 
     const blocks = ["a", "b", "c", "d", "e", "f"].map((block) => ({ block }));
-    expect(core.store.board().plugins[DOCK]).toEqual({
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toEqual({
       views: {
         page: {
           name: "Page",
@@ -353,8 +360,8 @@ describe("the step on starting", () => {
             sizes: [1],
             rails: {
               left: {
-                panels: [{ plugin: "blockr.core-edit_board_plugin" }],
-                active: { plugin: "blockr.core-edit_board_plugin" },
+                panels: [{ plugin: { package: "blockr.core", id: "edit_board_plugin" } }],
+                active: { plugin: { package: "blockr.core", id: "edit_board_plugin" } },
                 collapsed: false,
                 size: 500,
               },
@@ -374,7 +381,7 @@ describe("the step on starting", () => {
     const { core, settled, stop } = await startDock(document.createElement("div"), {}, boardWith(twoViews));
     await settled();
 
-    const state = core.store.board().plugins[DOCK] as DockState;
+    const state = core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState;
     expect(state.views.main?.grid).toEqual({ ...twoViews.views.main?.grid, rails: undefined });
     expect(state.views.main?.grid.rails).toBeUndefined();
     expect(state.views.side).toEqual(twoViews.views.side);
@@ -390,7 +397,7 @@ describe("the step on starting", () => {
     const { core, settled, stop } = await startDock(document.createElement("div"), {}, boardWith(twoViews));
     await settled();
 
-    expect(core.store.board().plugins[DOCK]).toMatchObject({ active: "main" });
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toMatchObject({ active: "main" });
     stop();
   });
 
@@ -402,7 +409,7 @@ describe("the step on starting", () => {
     const { core, settled, stop } = await startDock(document.createElement("div"), {}, boardWith(twoViews));
     await settled();
 
-    expect(core.store.board().plugins[DOCK]).toMatchObject({ active: "side" });
+    expect(core.store.board().plugins[DOCK.package]?.[DOCK.id]).toMatchObject({ active: "side" });
     stop();
   });
 });
@@ -431,7 +438,13 @@ describe("the demand", () => {
       ...board.board,
       blocks: {
         ...board.board.blocks,
-        c: { registry_id: "blockr.core-dataset_block", version: 1, state: { dataset: "mtcars", package: "datasets" }, name: "Cars", locked: null },
+        c: {
+          registry_id: { package: "blockr.core", id: "dataset_block" },
+          version: 1,
+          state: { dataset: "mtcars", package: "datasets" },
+          name: "Cars",
+          locked: null,
+        },
       },
     },
   };
@@ -453,7 +466,7 @@ describe("the demand", () => {
     const { core, sent, settled, stop } = await startDock(document.createElement("div"), {}, withC);
     await settled();
 
-    await act(() => core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "c" } }));
+    await act(() => core.commands.run(id("blockr.dock", "activate_panel"), { view: "main", panel: { block: "c" } }));
     await settled();
 
     expect(evaluated(sent).sort()).toEqual(["a", "b", "c"]);
@@ -462,9 +475,16 @@ describe("the demand", () => {
 });
 
 // Core's Edit board plugin, which the app of the fixture hello runs, and the
-// notes plugin, of a class that a test gives core.
-const EDIT = "blockr.core-edit_board_plugin";
-const NOTES = "blockr.test-notes_plugin";
+// notes plugin, of a class that a test gives core, each by the Id that core
+// makes of its class.
+const EDIT = id("blockr.core", "edit_board_plugin");
+const NOTES = id("blockr.test", "notes_plugin");
+
+// Their panels, as the dock's state names them: by a plain record of the
+// package and the id of each one's class, as JSON holds it, which is no object
+// of core's.
+const EDIT_PANEL: Panel = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
+const NOTES_PANEL: Panel = { plugin: { package: "blockr.test", id: "notes_plugin" } };
 
 // The class of the notes plugin, whose `ui` writes "Notes" in its element and
 // keeps what each render() gets and how many of its cleanups ran.
@@ -487,17 +507,19 @@ function notesClass() {
 // after core's plugins, on the board given, under the board lock where
 // `locked` says so.
 // R serves the module of the notes plugin's class, which the test gives by the
-// class's id, and core registers the class as it opens the board.
+// package and the id of the class, and core registers the class as it opens
+// the board.
 async function startWithNotes(el: HTMLElement, board: JsonBoard, locked = false) {
   const notes = notesClass();
   const s = await stubCore({
     hello: {
       ...hello,
       board,
-      plugins: { ...hello.plugins, [NOTES]: { name: "Notes", version: 1, module: "blockr.test/js/notes.js" } },
+      plugins: [...hello.plugins, { package: NOTES.package, id: NOTES.id, name: "Notes", version: 1, module: "blockr.test/js/notes.js" }],
       ...(locked ? { lock: { board: true, load: false } } : {}),
     },
-    modules: { ...modules, [NOTES]: notes.module },
+    modules,
+    offered: { ...offered, [NOTES.package]: { [NOTES.id]: notes.module } },
     el,
   });
   await s.settled();
@@ -532,7 +554,7 @@ const EMPTY_GRID: Grid = { orientation: "horizontal", children: [], sizes: [] };
 // A grid with a's panel in one tab group and the notes plugin's on the left
 // rail, collapsed or open.
 function notesOnRail(collapsed: boolean): Grid {
-  return { ...gridWith([{ block: "a" }]), rails: { left: { panels: [{ plugin: NOTES }], active: { plugin: NOTES }, collapsed, size: 260 } } };
+  return { ...gridWith([{ block: "a" }]), rails: { left: { panels: [NOTES_PANEL], active: NOTES_PANEL, collapsed, size: 260 } } };
 }
 
 // An element in the document, which the focus can reach, until the test ends.
@@ -544,15 +566,16 @@ function attached(): HTMLElement {
   return el;
 }
 
-// The frame of a plugin's panel, which the dock draws in the element.
-function panelFrame(el: HTMLElement, plugin: string): HTMLElement | null {
-  return el.querySelector<HTMLElement>(`.blockr-dock-panel[data-plugin="${plugin}"]`);
+// The frame of a plugin's panel, which the dock draws in the element, and
+// whose `data-plugin` names the plugin's class as core's messages name an id.
+function panelFrame(el: HTMLElement, plugin: IdRecord): HTMLElement | null {
+  return el.querySelector<HTMLElement>(`.blockr-dock-panel[data-plugin="${idText(plugin)}"]`);
 }
 
 describe("a plugin's panel", () => {
   test("holds the plugin's UI, which the dock mounts in the panel's frame with mountPlugin(), and its tab shows the plugin's name", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: EDIT }, { plugin: NOTES }], [{ block: "a" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([EDIT_PANEL, NOTES_PANEL], [{ block: "a" }]))));
 
     expect(tabs(el)).toEqual(["Edit board", "Notes", "Dataset"]);
     expect(panelFrame(el, EDIT)?.querySelector('section[aria-label="Links"]')).not.toBeNull();
@@ -564,9 +587,9 @@ describe("a plugin's panel", () => {
 
   test("stays mounted behind another tab, which dockview hides", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: EDIT }, { plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([EDIT_PANEL, NOTES_PANEL]))));
 
-    await act(() => s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { plugin: EDIT } }));
+    await act(() => s.core.commands.run(id("blockr.dock", "activate_panel"), { view: "main", panel: EDIT_PANEL }));
     await s.settled();
 
     const frame = panelFrame(el, NOTES);
@@ -586,7 +609,7 @@ describe("a plugin's panel", () => {
     expect(frame?.textContent).toBe("Notes");
     expect(frame?.closest<HTMLElement>(".dv-render-overlay")?.style.visibility).toBe("hidden");
 
-    await act(() => s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: false }));
+    await act(() => s.core.commands.run(id("blockr.dock", "collapse_rail"), { view: "main", edge: "left", collapsed: false }));
     await s.settled();
     expect(s.notes.renders).toHaveLength(1);
     expect(s.notes.cleanups()).toBe(0);
@@ -595,24 +618,24 @@ describe("a plugin's panel", () => {
 
   test("runs the cleanup of the plugin's UI once the panel goes, as its tab closes, as the view changes and as another board opens", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: EDIT }, { plugin: NOTES }]), gridWith([{ block: "b" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([EDIT_PANEL, NOTES_PANEL]), gridWith([{ block: "b" }]))));
 
-    await act(() => s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: NOTES } }));
+    await act(() => s.core.commands.run(id("blockr.dock", "remove_panel"), { view: "main", panel: NOTES_PANEL }));
     await s.settled();
     expect(s.notes.cleanups()).toBe(1);
     expect(s.notes.renders[0]?.signal.aborted).toBe(true);
     expect(panelFrame(el, NOTES)).toBeNull();
 
-    await act(() => s.core.commands.run("blockr.dock-add_panel", { view: "main", panel: { plugin: NOTES } }));
+    await act(() => s.core.commands.run(id("blockr.dock", "add_panel"), { view: "main", panel: NOTES_PANEL }));
     await s.settled();
     expect(s.notes.renders).toHaveLength(2);
 
-    await act(() => s.core.commands.run("blockr.dock-activate_view", { view: "side" }));
+    await act(() => s.core.commands.run(id("blockr.dock", "activate_view"), { view: "side" }));
     await s.settled();
     expect(s.notes.cleanups()).toBe(2);
     expect(panelFrame(el, EDIT)).toBeNull();
 
-    await act(() => s.core.commands.run("blockr.dock-activate_view", { view: "main" }));
+    await act(() => s.core.commands.run(id("blockr.dock", "activate_view"), { view: "main" }));
     await s.settled();
     expect(s.notes.renders).toHaveLength(3);
 
@@ -624,7 +647,7 @@ describe("a plugin's panel", () => {
 
   test("ends a UI that draws in a React root of its own, as the Edit board plugin's does, without an error, as its tab closes", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: EDIT }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, EDIT_PANEL]))));
     const frame = panelFrame(el, EDIT);
     expect(frame?.querySelector('section[aria-label="Links"]')).not.toBeNull();
 
@@ -641,7 +664,7 @@ describe("a plugin's panel", () => {
       window.removeEventListener("error", report);
       logged.mockRestore();
     });
-    await act(() => s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: EDIT } }));
+    await act(() => s.core.commands.run(id("blockr.dock", "remove_panel"), { view: "main", panel: EDIT_PANEL }));
     await s.settled();
 
     expect(panelFrame(el, EDIT)).toBeNull();
@@ -681,7 +704,7 @@ describe("the tab of a plugin's panel", () => {
   test("shows a dot while a warning or an error about the plugin holds, the error's while both hold, and none for a message", async () => {
     const el = document.createElement("div");
     // The tab group shows a's panel, with the notes plugin's behind it.
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: NOTES }, { block: "a" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([NOTES_PANEL, { block: "a" }]))));
     expect(dotOn(el, "Notes")).toBeNull();
 
     let withdrawLost: () => void = () => undefined;
@@ -725,7 +748,7 @@ describe("the tab of a plugin's panel", () => {
 
   test("holds their messages, the errors first, in its tooltip, as the keyboard's focus moves onto it or the pointer rests on it, and as its description", async () => {
     const el = attached();
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, NOTES_PANEL]))));
     const tab = tabNamed(el, "Notes");
     expect(tab.hasAttribute("aria-description")).toBe(false);
 
@@ -773,7 +796,7 @@ describe("the tab of a plugin's panel", () => {
 
   test("has no tooltip while no warning or error about the plugin holds", async () => {
     const el = attached();
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, NOTES_PANEL]))));
     act(() => {
       s.core.notifications.notify(NOTES, saved);
     });
@@ -841,7 +864,7 @@ async function openByKeyboard(button: HTMLElement | null): Promise<HTMLInputElem
 
 // The view main's grid in the dock's state.
 function mainGrid(core: CoreApi): Grid | undefined {
-  return (core.store.board().plugins[DOCK] as DockState).views.main?.grid;
+  return (core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState).views.main?.grid;
 }
 
 describe("the panel picker", () => {
@@ -893,7 +916,7 @@ describe("the panel picker", () => {
 
   test('adds a pick from the "+" of a tab group as a new tab of that group, which the group shows', async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "b" }], [{ plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "b" }], [NOTES_PANEL]))));
 
     click(el.querySelectorAll(".blockr-dock-add")[0]);
     await drawn();
@@ -901,8 +924,8 @@ describe("the panel picker", () => {
     await s.settled();
 
     expect(mainGrid(s.core)?.children).toEqual([
-      { panels: [{ block: "b" }, { plugin: EDIT }], active: { plugin: EDIT } },
-      { panels: [{ plugin: NOTES }], active: { plugin: NOTES } },
+      { panels: [{ block: "b" }, EDIT_PANEL], active: EDIT_PANEL },
+      { panels: [NOTES_PANEL], active: NOTES_PANEL },
     ]);
     expect(panelFrame(el, EDIT)?.querySelector('section[aria-label="Links"]')).not.toBeNull();
     expect(picker()).toBeNull();
@@ -920,7 +943,7 @@ describe("the panel picker", () => {
     // board refuses it.
     click(el.querySelectorAll(".blockr-dock-add")[0]);
     await drawn();
-    await act(() => s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { block: "a" } }));
+    await act(() => s.core.commands.run(id("blockr.dock", "remove_panel"), { view: "main", panel: { block: "a" } }));
     await s.settled();
     await drawn();
     click(entry("Notes"));
@@ -934,7 +957,7 @@ describe("the panel picker", () => {
 
   test("says why where the active view shows every block and plugin already", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { block: "b" }, { plugin: EDIT }, { plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { block: "b" }, EDIT_PANEL, NOTES_PANEL]))));
 
     click(el.querySelector(".blockr-dock-add"));
     await drawn();
@@ -960,15 +983,16 @@ describe("the panel picker", () => {
     const search = await openByKeyboard(el.querySelector(".blockr-dock-empty-add"));
     expect(entries()).toHaveLength(4);
 
-    // The search finds an entry by its name, its block class or its id, and
-    // by every word typed.
+    // The search finds an entry by its name, its block class or its id, a
+    // plugin's by the id of its class and the package, and by every word
+    // typed.
     typeSearch(search, "set");
     await drawn();
     expect(entries()).toEqual([["Dataset", "dataset block"]]);
     typeSearch(search, "tail");
     await drawn();
     expect(entries()).toEqual([["Head", "head/tail block"]]);
-    typeSearch(search, "test-notes");
+    typeSearch(search, "notes_plugin blockr.test");
     await drawn();
     expect(entries()).toEqual([["Notes"]]);
     typeSearch(search, "BLOCK head");
@@ -1014,7 +1038,7 @@ describe("the panel picker", () => {
 
     pressFocused("Enter");
     await s.settled();
-    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }, { plugin: NOTES }], active: { plugin: NOTES } }]);
+    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }, NOTES_PANEL], active: NOTES_PANEL }]);
     s.stop();
   });
 
@@ -1046,10 +1070,10 @@ describe("the panel picker", () => {
 describe("an empty view", () => {
   test("says to start by adding a panel, with a button that opens the panel picker, whose pick goes to the default place", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([NOTES_PANEL]))));
     expect(el.querySelector(".blockr-dock-empty")).toBeNull();
 
-    await act(() => s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: NOTES } }));
+    await act(() => s.core.commands.run(id("blockr.dock", "remove_panel"), { view: "main", panel: NOTES_PANEL }));
     await s.settled();
     const prompt = el.querySelector(".blockr-dock-empty");
     expect(prompt?.querySelector("p")?.textContent).toBe("Start by adding a panel");
@@ -1087,7 +1111,7 @@ describe("an empty view", () => {
 // which it hides behind another tab and on a collapsed rail.
 function showsFrame(el: HTMLElement, panel: Panel): boolean {
   const frame = el.querySelector<HTMLElement>(
-    "block" in panel ? `.blockr-dock-panel[data-block="${panel.block}"]` : `.blockr-dock-panel[data-plugin="${panel.plugin}"]`,
+    "block" in panel ? `.blockr-dock-panel[data-block="${panel.block}"]` : `.blockr-dock-panel[data-plugin="${idText(panel.plugin)}"]`,
   );
   return frame !== null && frame.closest<HTMLElement>(".dv-render-overlay")?.style.visibility !== "hidden";
 }
@@ -1109,13 +1133,13 @@ describe("showing a block or a plugin", () => {
 
   test("adds the panel of a plugin that the active view lacks at the default place, and switches no view", async () => {
     const el = document.createElement("div");
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([NOTES_PANEL]))));
 
     await act(() => s.core.show({ plugin: NOTES }));
-    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "a" }, { plugin: NOTES }], active: { plugin: NOTES } }]);
-    expect((s.core.store.board().plugins[DOCK] as DockState).active).toBe("main");
+    expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "a" }, NOTES_PANEL], active: NOTES_PANEL }]);
+    expect((s.core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState).active).toBe("main");
     await s.settled();
-    expect(showsFrame(el, { plugin: NOTES })).toBe(true);
+    expect(showsFrame(el, NOTES_PANEL)).toBe(true);
     expect(s.notes.renders).toHaveLength(1);
     expect(s.core.store.canUndo()).toBe(false);
     s.stop();
@@ -1124,12 +1148,12 @@ describe("showing a block or a plugin", () => {
   test("opens a collapsed rail that holds the panel", async () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(notesOnRail(true))));
-    expect(showsFrame(el, { plugin: NOTES })).toBe(false);
+    expect(showsFrame(el, NOTES_PANEL)).toBe(false);
 
     await act(() => s.core.show({ plugin: NOTES }));
     expect(mainGrid(s.core)?.rails?.left?.collapsed).toBe(false);
     await s.settled();
-    expect(showsFrame(el, { plugin: NOTES })).toBe(true);
+    expect(showsFrame(el, NOTES_PANEL)).toBe(true);
     s.stop();
   });
 
@@ -1156,7 +1180,7 @@ describe("showing a block or a plugin", () => {
     await act(() => s.core.show({ block: "a" }));
     await act(() => s.core.show({ plugin: NOTES }));
     await act(() => s.core.show({ plugin: EDIT }));
-    expect(mainGrid(s.core)).toMatchObject({ children: [{ active: { plugin: EDIT } }], rails: { left: { collapsed: false } } });
+    expect(mainGrid(s.core)).toMatchObject({ children: [{ active: EDIT_PANEL }], rails: { left: { collapsed: false } } });
     expect(document.activeElement).toBe(input);
     s.stop();
   });
@@ -1173,16 +1197,16 @@ describe("what is on screen", () => {
   test("is the blocks and the plugins whose panels the active view shows, as the dock draws and as the view or its grid changes", async () => {
     const el = document.createElement("div");
     const main = { ...notesOnRail(false), ...gridWith([{ block: "a" }, { block: "b" }]) };
-    const s = await startWithNotes(el, boardWith(dockStateWith(main, gridWith([{ block: "a" }, { plugin: EDIT }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(main, gridWith([{ block: "a" }, EDIT_PANEL]))));
     expect(s.core.onScreen.get()).toEqual({ blocks: ["b"], plugins: [NOTES] });
 
-    await act(() => s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "a" } }));
+    await act(() => s.core.commands.run(id("blockr.dock", "activate_panel"), { view: "main", panel: { block: "a" } }));
     expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [NOTES] });
 
-    await act(() => s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: true }));
+    await act(() => s.core.commands.run(id("blockr.dock", "collapse_rail"), { view: "main", edge: "left", collapsed: true }));
     expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [] });
 
-    await act(() => s.core.commands.run("blockr.dock-activate_view", { view: "side" }));
+    await act(() => s.core.commands.run(id("blockr.dock", "activate_view"), { view: "side" }));
     expect(s.core.onScreen.get()).toEqual({ blocks: [], plugins: [EDIT] });
     s.stop();
   });
@@ -1192,7 +1216,7 @@ describe("what is on screen", () => {
     onTestFinished(() => {
       setWindowWidth(width);
     });
-    const grid: Grid = { ...gridWith([{ block: "a" }]), rails: { left: { panels: [{ plugin: EDIT }], active: { plugin: EDIT }, collapsed: true, size: 260 } } };
+    const grid: Grid = { ...gridWith([{ block: "a" }]), rails: { left: { panels: [EDIT_PANEL], active: EDIT_PANEL, collapsed: true, size: 260 } } };
     const s = await startDock(document.createElement("div"), { narrow_breakpoint: width - 100 }, boardWith(dockStateWith(grid)));
     await s.settled();
     expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [] });
@@ -1450,7 +1474,7 @@ describe("the toasts", () => {
     const warned = () => ({
       conditions: [{ severity: "warning" as const, class: ["warning", "condition"], phase: "block_eval" as const, message: "Few rows." }],
     });
-    const { core, settled, stop } = await stubCore({ hello, modules, el, evaluate: warned });
+    const { core, settled, stop } = await stubCore({ hello, modules, offered, el, evaluate: warned });
     await settled();
     expect(core.notifications.get().some((n) => n.source.kind === "r" && n.message === "Few rows.")).toBe(true);
 
@@ -1487,7 +1511,7 @@ describe("the toasts", () => {
     const el = document.createElement("div");
     // The view side holds the notes plugin's panel, behind b's, and main,
     // which is active, holds none.
-    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }, { block: "b" }]))));
+    const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([NOTES_PANEL, { block: "b" }]))));
 
     act(() => {
       s.core.notifications.notify(NOTES, lost);
@@ -1503,16 +1527,16 @@ describe("the toasts", () => {
 
     click(link);
     await s.settled();
-    const state = s.core.store.board().plugins[DOCK] as DockState;
+    const state = s.core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState;
     expect(state.active).toBe("side");
-    expect(state.views.side?.grid.children[0]).toMatchObject({ active: { plugin: NOTES } });
+    expect(state.views.side?.grid.children[0]).toMatchObject({ active: NOTES_PANEL });
     expect(s.core.store.canUndo()).toBe(false);
     // The toasts go, and the dot on the panel's tab tells of the error.
     expect(toasts(el)).toEqual([]);
     expect(dotOn(el, "Notes")).toBe("error");
 
     // Back on main, the toasts come back.
-    await act(() => s.core.commands.run("blockr.dock-activate_view", { view: "main" }));
+    await act(() => s.core.commands.run(id("blockr.dock", "activate_view"), { view: "main" }));
     await s.settled();
     expect(messages(el)).toEqual(["Lost the draft.", "Saved."]);
     s.stop();
@@ -1528,7 +1552,7 @@ describe("the toasts", () => {
     click(toastWithMessage(el, "Lost the draft.").querySelector("button.blockr-dock-toast-link"));
     await s.settled();
 
-    expect(mainGrid(s.core)).toMatchObject({ children: [{ panels: [{ block: "a" }, { plugin: NOTES }], active: { plugin: NOTES } }] });
+    expect(mainGrid(s.core)).toMatchObject({ children: [{ panels: [{ block: "a" }, NOTES_PANEL], active: NOTES_PANEL }] });
     expect(toasts(el)).toEqual([]);
     expect(dotOn(el, "Notes")).toBe("error");
     s.stop();
@@ -1545,25 +1569,25 @@ describe("the toasts", () => {
     s.stop();
 
     const other = document.createElement("div");
-    const t = await startWithNotes(other, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }]))), true);
+    const t = await startWithNotes(other, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([NOTES_PANEL]))), true);
     act(() => {
       t.core.notifications.notify(NOTES, lost);
     });
     click(toastWithMessage(other, "Lost the draft.").querySelector("button.blockr-dock-toast-link"));
     await t.settled();
-    expect((t.core.store.board().plugins[DOCK] as DockState).active).toBe("side");
+    expect((t.core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState).active).toBe("side");
     expect(toasts(other)).toEqual([]);
     t.stop();
   });
 
   test("show what the store dropped as the board opened, which core raised before the dock drew", async () => {
     const board = rBoard();
-    const gone = { registry_id: "blockr.gone-gone_block", version: 1, state: {}, name: "Gone", locked: null };
+    const gone = { registry_id: { package: "blockr.gone", id: "gone_block" }, version: 1, state: {}, name: "Gone", locked: null };
     const el = document.createElement("div");
     const { settled, stop } = await startDock(el, {}, { ...board, board: { ...board.board, blocks: { ...board.board.blocks, x: gone } } });
     await settled();
 
-    expect(toasts(el)).toEqual([["warning", "Board", expect.stringMatching(/opened without[\s\S]*blockr\.gone-gone_block/)]]);
+    expect(toasts(el)).toEqual([["warning", "Board", expect.stringMatching(/opened without[\s\S]*gone_block of blockr\.gone/)]]);
     stop();
   });
 

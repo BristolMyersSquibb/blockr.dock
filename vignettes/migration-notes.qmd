@@ -261,8 +261,8 @@ For the DAG of blockr.dag, the notes of blockr.graph give `new_graph_plugin()` i
 In version 0.2.0, an extension without a name in `extensions` has the name of its class, without `_extension`, as `dag` for `new_dag_extension()`.
 In version 0.2.1, a plugin without a name has none.
 So a script that places the panel of such an extension, as `ext("dag")` does, gives its plugin that name, as `dag = blockr.graph::new_graph_plugin()`.
-A grid may also name a plugin by the id of its class, as `plg("blockr.graph-graph_plugin")`, which needs no name.
-Core's `new_board()` refuses a `plg()` whose id is neither a name in `plugins` nor the id of a plugin class.
+A grid may also name a plugin by its class, with the class's package, as `plg("graph_plugin", package = "blockr.graph")`, which needs no name.
+Core's `new_board()` refuses a `plg()` without a package whose id is no name in `plugins`.
 
 The Edit board extension goes, since core's Edit board plugin makes the same edits.
 So a script puts `edit = new_edit_board_plugin()` in the `plugins` of `new_board()`, in place of `new_edit_board_extension()`.
@@ -300,7 +300,7 @@ So a script puts the plugin on its board, rather than rely on the default.
 Where the app's plugins then lack the plugin's class, `serve()` stops with the error `board_plugins_invalid`, which names the class.
 
 The function `dock_extensions()` goes, with `dock_ext_ids()`.
-Core's `board_plugins()` gives the plugins that a board holds, by the id of each plugin's class, the dock plugin among them.
+Core's `board_plugins()` gives the plugins that a board holds, by the package of each plugin's class and then by the class's id, the dock plugin among them.
 
 An extension that a script defined with `new_dock_extension()` has no place in version 0.2.1, since a plugin class comes from a package.
 So a script moves such an extension into a package, as a plugin class.
@@ -417,7 +417,7 @@ Nothing draws UI in R in version 0.2.1, so a script gives one of these items in 
 
 - A link, `navbar_link(id, label, href)`, which opens in a new tab.
 - A menu of links and further menus, `navbar_menu(id, label, ...)`.
-- A module that a package offers, `navbar_item(id, module)`, by the module's id, which has the form `{package}-{name}`.
+- A module that a package offers, `navbar_item(id, module, package)`, by the module's id and the package that offers it.
   Where the item needs R, that package gives a plugin class, whose requests the module calls.
 
 ```{r, eval = FALSE}
@@ -503,7 +503,7 @@ The notes of blockr.core describe this for core's parts, and the readers of the 
 - Core's `board_plugins()` reads the plugins of a board, the dock plugin among them, in place of `dock_extensions()`.
 
 The function `board_grids()` goes, since each view that `board_views()` reads holds its grid.
-Such a grid names the panel of each plugin by the id of the plugin's class, as `plg("blockr.core-edit_board_plugin")`.
+Such a grid names the panel of each plugin by its class, as `plg("edit_board_plugin", package = "blockr.core")`.
 The board keeps no name that a script gives a plugin.
 
 Take a board with two views, `main` and `side`, as version 0.2.1 builds it:
@@ -562,7 +562,7 @@ visible <- board_visible(full)
 lnks <- board_links(full)
 
 plugins <- board_plugins(full)
-plugins[["blockr.dock-dock_plugin"]] <- new_dock_plugin(
+plugins[["blockr.dock"]][["dock_plugin"]] <- new_dock_plugin(
   views = views["side"],
   active = "side",
   visible = visible[names(visible) %in% keep]

@@ -7,7 +7,10 @@ test_that("the dock plugin is a frontend of its own class", {
     c("dock_plugin", "frontend_plugin", "plugin"),
     exact = TRUE
   )
-  expect_identical(plugin_class_id(x), "blockr.dock-dock_plugin")
+  expect_identical(
+    plugin_class_id(x),
+    list(package = "blockr.dock", id = "dock_plugin")
+  )
 })
 
 test_that("the dock keeps every default of blockr.ui's theme variables", {
@@ -113,7 +116,7 @@ test_that("core finds the dock's plugin class in the package's listing", {
 
 test_that("the package offers blockr.assistant its module `assistant`", {
 
-  # Core gives the module the id blockr.dock-assistant, by which
+  # Core gives the module the id assistant within blockr.dock, by which
   # blockr.assistant loads it as each call of its model goes out.
   expect_identical(
     ._BLOCKR_MODULES_[["modules"]],
@@ -137,7 +140,9 @@ test_that("the state holds each view's grid, name, folder and index", {
     views = list(
       overview = dock_view(
         dock_grid(
-          c("a", "b"), plg("blockr.core-edit_board_plugin"), sizes = c(3, 7)
+          c("a", "b"),
+          plg("edit_board_plugin", package = "blockr.core"),
+          sizes = c(3, 7)
         ),
         name = "Overview"
       ),
@@ -148,7 +153,7 @@ test_that("the state holds each view's grid, name, folder and index", {
     visible = list(b = "outputs")
   )
 
-  edit <- list(plugin = "blockr.core-edit_board_plugin")
+  edit <- list(plugin = list(package = "blockr.core", id = "edit_board_plugin"))
 
   expect_identical(
     plugin_state(dock),
@@ -544,7 +549,7 @@ test_that("the plugin prints its views and folders in the views menu's order", {
 
   expect_identical(
     format(new_dock_plugin()),
-    "<dock_plugin> blockr.dock-dock_plugin"
+    "<dock_plugin> dock_plugin of blockr.dock"
   )
 })
 
@@ -625,7 +630,7 @@ test_that("view_blocks() reads the blocks of a view in the grid's order", {
   grid <- dock_grid(
     "c",
     group(panels(blk("a"), plg("edit")), "d"),
-    rail(plg("blockr.core-file_storage_plugin")),
+    rail(plg("file_storage_plugin", package = "blockr.core")),
     rail("b", position = "right")
   )
 

@@ -1,5 +1,5 @@
 // The types of the dock plugin's state, which the board holds at
-// /plugins/blockr.dock-dock_plugin
+// /plugins/blockr.dock/dock_plugin
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.1#the-state).
 // The build generates the JSON Schema of the state from DockState and writes
 // it beside the dock's module, as inst/js/dock.schema.json.
@@ -8,10 +8,17 @@
 // The comment on each type and property becomes its description in the
 // schema, which a model reads too.
 // Each is a `type` rather than an `interface`, so that a state is a Json.
+// Only JSON holds an id as a plain record of its package and its id, and the
+// state is JSON, so a panel names a plugin's class by such a record, an
+// IdRecord, rather than by the Id that core makes of the pair.
+// The dock makes an Id of the record with core.id() as it reads the state.
+// The schema allows only the records that core.id() takes: a package named as
+// R names one, and an id that is not empty.
+// So the store refuses a state with a record that core.id() would throw for.
 
 /* eslint-disable @typescript-eslint/consistent-type-definitions -- an interface would not be assignable to Json */
 
-import type { BlockId, PluginClassId } from "@blockr/core";
+import type { BlockId } from "@blockr/core";
 
 /** The id of a view, which never changes. */
 export type ViewId = string;
@@ -112,4 +119,18 @@ export type Rail = {
 };
 
 /** A panel: the card of one of the board's blocks, by the block's id, or the UI of one of the app's plugins, by the id of the plugin's class. */
-export type Panel = { readonly block: BlockId } | { readonly plugin: PluginClassId };
+export type Panel = { readonly block: BlockId } | { readonly plugin: IdRecord };
+
+/** The id of what a package defines, such as a plugin's class, by the package and the id within it, as { "package": "blockr.core", "id": "edit_board_plugin" }. */
+export type IdRecord = {
+  /**
+   * The package that defines it, named as R names a package.
+   * @pattern ^[A-Za-z][A-Za-z0-9.]*[A-Za-z0-9]$
+   */
+  readonly package: string;
+  /**
+   * Its id within the package.
+   * @minLength 1
+   */
+  readonly id: string;
+};

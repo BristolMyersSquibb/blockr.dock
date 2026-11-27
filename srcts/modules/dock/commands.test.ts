@@ -1,9 +1,11 @@
 // The commands of the dock plugin's class, which ../../commands defines, run
 // through blockr.core's command registry and store on core's CoreApi for
 // tests, as menus and the assistant's tools run them.
+// Core registers each under blockr.dock, so a test names one by the Id of
+// blockr.dock and the command's id.
 
 import type { Json, JsonBoard } from "@blockr/core";
-import { HELLO, stubCore } from "@blockr/core/stubs";
+import { HELLO, id, stubCore } from "@blockr/core/stubs";
 import { expectedErrors } from "@blockr/ui/stubs";
 import { describe, expect, onTestFinished, test } from "vitest";
 import { compare, gridPanels, inFolder, RAIL_SIZE, viewOrder } from "../../state/index.ts";
@@ -13,14 +15,16 @@ import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
 
-const DOCK = "blockr.dock-dock_plugin";
+const DOCK = id("blockr.dock", "dock_plugin");
 
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
-const edit = { plugin: "blockr.core-edit_board_plugin" };
+// Core's Edit board plugin, by the record of its class, as the dock's state
+// holds it and as JSON gives the args of a command.
+const edit = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
 // The notes plugin, of blockr.test, a package that only the tests know.
-const notes = { plugin: "blockr.test-notes_plugin" };
+const notes = { plugin: { package: "blockr.test", id: "notes_plugin" } };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -83,14 +87,20 @@ function helloWith(dockState: DockState, locked: boolean) {
       id: "curious_otter",
       name: "Curious otter",
       blocks: {
-        a: { registry_id: "blockr.core-dataset_block", version: 1, state: { dataset: "iris", package: "datasets" }, name: "Data", locked: null },
-        b: { registry_id: "blockr.core-head_block", version: 1, state: { n: 3, direction: "head" }, name: "Head", locked: null },
-        c: { registry_id: "blockr.core-head_block", version: 1, state: { n: 5, direction: "tail" }, name: "Tail", locked: null },
+        a: {
+          registry_id: { package: "blockr.core", id: "dataset_block" },
+          version: 1,
+          state: { dataset: "iris", package: "datasets" },
+          name: "Data",
+          locked: null,
+        },
+        b: { registry_id: { package: "blockr.core", id: "head_block" }, version: 1, state: { n: 3, direction: "head" }, name: "Head", locked: null },
+        c: { registry_id: { package: "blockr.core", id: "head_block" }, version: 1, state: { n: 5, direction: "tail" }, name: "Tail", locked: null },
       },
       links: { ab: { from: "a", to: "b", input: "data" }, ac: { from: "a", to: "c", input: "data" } },
       stacks: {},
       options: {},
-      plugins: { [DOCK]: { state: dockState, version: 1 } },
+      plugins: { [DOCK.package]: { [DOCK.id]: { state: dockState, version: 1 } } },
     },
   };
   return {
@@ -98,15 +108,17 @@ function helloWith(dockState: DockState, locked: boolean) {
     board,
     lock: { board: locked, load: false },
     packages: { ...HELLO.packages, "blockr.dock": "0.2.1" },
-    plugins: {
-      ...Object.fromEntries(Object.entries(HELLO.plugins).filter(([id]) => id !== "blockr.core-basic_frontend_plugin")),
-      [DOCK]: {
+    plugins: [
+      ...HELLO.plugins.filter((entry) => entry.package !== "blockr.core" || entry.id !== "basic_frontend_plugin"),
+      {
+        package: DOCK.package,
+        id: DOCK.id,
         name: "Dock",
         version: 1,
         options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
         module: "blockr.dock/js/dock.js",
       },
-    },
+    ],
     options: {
       ...HELLO.options,
       compact: { package: "blockr.dock", module: "blockr.dock/compact-option.js", version: 1 },
@@ -116,7 +128,10 @@ function helloWith(dockState: DockState, locked: boolean) {
   };
 }
 
-const modules = { [DOCK]: dock, compact: compactOption, view_tabs: viewTabsOption, sync_rails: syncRailsOption };
+// The modules of the dock's board options, by their ids, and the module of the
+// dock plugin's class, by the package and the id of the class.
+const modules = { compact: compactOption, view_tabs: viewTabsOption, sync_rails: syncRailsOption };
+const offered = { [DOCK.package]: { [DOCK.id]: dock } };
 
 // Starts core on a board that holds the dock's state given, the one above
 // unless given, with the values of blockr options that R holds, none unless
@@ -127,6 +142,7 @@ async function start(
   const { core, logged, settled, stop } = await stubCore({
     hello: helloWith(options.dockState ?? state, options.locked ?? false),
     modules,
+    offered,
     blockrOptions: options.blockrOptions ?? {},
   });
   onTestFinished(stop);
@@ -134,16 +150,18 @@ async function start(
   return {
     core,
     // The dock's state on the board.
-    dock: () => core.store.board().plugins[DOCK] as DockState,
-    run: (name: string, args: Json = {}) => core.commands.run(`blockr.dock-${name}`, args),
-    preflight: (name: string, args: Json = {}) => core.commands.preflight(`blockr.dock-${name}`, args),
+    dock: () => core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState,
+    run: (name: string, args: Json = {}) => core.commands.run(id("blockr.dock", name), args),
+    preflight: (name: string, args: Json = {}) => core.commands.preflight(id("blockr.dock", name), args),
     // Runs a command that refuses to run with the failures given.
-    // It rejects as core's own commands refuse, naming the command, with a
-    // line for each failure, and nothing is logged at error.
+    // It rejects as core's own commands refuse, naming the command as core's
+    // messages name an id, with a line for each failure, and nothing is logged
+    // at error.
     refuses: async (name: string, args: Json, failures: readonly string[]) => {
-      const id = `blockr.dock-${name}`;
-      const refused = core.commands.run(id, args);
-      await expect(refused).rejects.toThrow([`The command "${id}" refused to run`, ...failures.map((failure) => `- ${failure}`)].join("\n"));
+      const refused = core.commands.run(id("blockr.dock", name), args);
+      await expect(refused).rejects.toThrow(
+        [`The command "${name} of blockr.dock" refused to run`, ...failures.map((failure) => `- ${failure}`)].join("\n"),
+      );
       await expect(refused).rejects.toHaveProperty("failures", failures);
       expect(logged.filter((line) => line.level === "error")).toEqual([]);
     },
@@ -169,36 +187,34 @@ const IDS = [
   "set_grid",
   "collapse_rail",
   "set_sections",
-].map((name) => `blockr.dock-${name}`);
+];
 
 describe("the dock's commands", () => {
-  test("are the 18 of the class, each with a label, a description and args, and four take no undo step", async () => {
+  test("are the 18 of the class, under blockr.dock, each with its id alone, a label, a description and args, and four take no undo step", async () => {
     const { core } = await start();
     const registered = core.commands.registered();
+    const of = (name: string) => registered.get(id("blockr.dock", name));
 
-    expect(Object.keys(registered).filter((id) => id.startsWith("blockr.dock-")).sort()).toEqual([...IDS].sort());
-    for (const id of IDS) {
-      expect(registered[id]?.label).not.toBe("");
-      expect(registered[id]?.description).not.toBe("");
-      expect(registered[id]?.args).toMatchObject({ type: "object", additionalProperties: false });
+    const dock = [...registered.keys()].filter((key) => key.package === "blockr.dock").map((key) => key.id);
+    expect(dock.sort()).toEqual([...IDS].sort());
+    for (const name of IDS) {
+      expect(of(name)?.id).toBe(name);
+      expect(of(name)?.label).not.toBe("");
+      expect(of(name)?.description).not.toBe("");
+      expect(of(name)?.args).toMatchObject({ type: "object", additionalProperties: false });
     }
-    expect(IDS.filter((id) => registered[id]?.undo === false)).toEqual([
-      "blockr.dock-activate_view",
-      "blockr.dock-activate_panel",
-      "blockr.dock-show_panel",
-      "blockr.dock-collapse_rail",
-    ]);
+    expect(IDS.filter((name) => of(name)?.undo === false)).toEqual(["activate_view", "activate_panel", "show_panel", "collapse_rail"]);
   });
 
   test("carry the definitions of the state's schema that a panel and a grid refer to", async () => {
     const { core } = await start();
-    const args = core.commands.registered()["blockr.dock-set_grid"]?.args;
-    expect(Object.keys((args?.$defs ?? {}) as object)).toEqual(["BlockId", "Grid", "Node", "Panel", "PluginClassId", "Rail", "Split", "TabGroup"]);
-    expect(core.commands.registered()["blockr.dock-remove_view"]?.args).not.toHaveProperty("$defs");
+    const args = core.commands.registered().get(id("blockr.dock", "set_grid"))?.args;
+    expect(Object.keys((args?.$defs ?? {}) as object)).toEqual(["BlockId", "Grid", "IdRecord", "Node", "Panel", "Rail", "Split", "TabGroup"]);
+    expect(core.commands.registered().get(id("blockr.dock", "remove_view"))?.args).not.toHaveProperty("$defs");
   });
 });
 
-describe("blockr.dock-add_view", () => {
+describe("add_view", () => {
   test('adds an empty view named "View N" at the end of the top, under a new id, and makes it active, which one undo takes back', async () => {
     const { core, dock, run } = await start();
 
@@ -246,7 +262,7 @@ describe("blockr.dock-add_view", () => {
   });
 });
 
-describe("blockr.dock-remove_view", () => {
+describe("remove_view", () => {
   test("removes a view and makes the first view of the navigation active where it was, which one undo takes back", async () => {
     const { core, dock, run } = await start();
 
@@ -273,7 +289,7 @@ describe("blockr.dock-remove_view", () => {
   });
 });
 
-describe("blockr.dock-rename_view", () => {
+describe("rename_view", () => {
   test("renames a view, to the name of another view too, and refuses a name of spaces alone", async () => {
     const { dock, run } = await start();
     await run("rename_view", { view: "side", name: "Main" });
@@ -283,7 +299,7 @@ describe("blockr.dock-rename_view", () => {
   });
 });
 
-describe("blockr.dock-move_view", () => {
+describe("move_view", () => {
   test("moves a view into a folder, before the view that `before` names, changing only its folder and index", async () => {
     const { core, dock, run } = await start();
 
@@ -320,7 +336,7 @@ describe("blockr.dock-move_view", () => {
   });
 });
 
-describe("blockr.dock-activate_view", () => {
+describe("activate_view", () => {
   test("makes a view active without an undo step, so that undo takes back the edit before it", async () => {
     const { core, dock, run } = await start();
 
@@ -340,7 +356,7 @@ describe("blockr.dock-activate_view", () => {
   });
 });
 
-describe("blockr.dock-add_folder", () => {
+describe("add_folder", () => {
   test('adds a folder named "Folder N" at the end of the top, under a new id, which one undo takes back', async () => {
     const { core, dock, run } = await start();
 
@@ -362,7 +378,7 @@ describe("blockr.dock-add_folder", () => {
   });
 });
 
-describe("blockr.dock-remove_folder", () => {
+describe("remove_folder", () => {
   test("moves what the folder holds up into its place, in its order, which one undo takes back", async () => {
     const { core, dock, run } = await start();
 
@@ -376,7 +392,7 @@ describe("blockr.dock-remove_folder", () => {
   });
 });
 
-describe("blockr.dock-rename_folder", () => {
+describe("rename_folder", () => {
   test("renames a folder, and refuses a name of spaces alone", async () => {
     const { dock, run } = await start();
     await run("rename_folder", { folder: "g", name: "Labs" });
@@ -385,7 +401,7 @@ describe("blockr.dock-rename_folder", () => {
   });
 });
 
-describe("blockr.dock-move_folder", () => {
+describe("move_folder", () => {
   test("moves a folder to the top, before the view that `before` names, with what it holds", async () => {
     const { dock, run } = await start();
     await run("move_folder", { folder: "f", into: null, before: { view: "main" } });
@@ -423,7 +439,7 @@ describe("the commands for views and folders on a locked board", () => {
   });
 });
 
-describe("blockr.dock-add_panel", () => {
+describe("add_panel", () => {
   test("places a panel at the default place where nothing names a place, which one undo takes back", async () => {
     const { core, dock, run } = await start();
 
@@ -458,9 +474,16 @@ describe("blockr.dock-add_panel", () => {
     await expect(run("add_panel", { view: "main", panel: notes, side: "beside" })).rejects.toThrow("/side");
     expect(dock()).toEqual(state);
   });
+
+  test("refuses a panel that names a plugin by one string, as a joined id did, which its args' schema takes as no record of a package and an id", async () => {
+    const { dock, run } = await start();
+    await expect(run("add_panel", { view: "side", panel: { plugin: "blockr.core-edit_board_plugin" } })).rejects.toThrow("/panel");
+    await expect(run("add_panel", { view: "side", panel: { plugin: { package: "blockr.core" } } })).rejects.toThrow("/panel");
+    expect(dock()).toEqual(state);
+  });
 });
 
-describe("blockr.dock-remove_panel", () => {
+describe("remove_panel", () => {
   test("takes a panel out of a view, with the tab group or rail that it empties, which one undo takes back", async () => {
     const { core, dock, run } = await start();
 
@@ -480,7 +503,7 @@ describe("blockr.dock-remove_panel", () => {
   });
 });
 
-describe("blockr.dock-move_panel", () => {
+describe("move_panel", () => {
   test("moves a panel into the tab group of the panel that `near` names, or onto another rail", async () => {
     const { dock, run } = await start();
 
@@ -519,15 +542,15 @@ describe("blockr.dock-move_panel", () => {
 
   test("refuses a `near` that the view does not show, and one on a rail beside which the panel would go", async () => {
     const { dock, refuses } = await start();
-    await refuses("move_panel", { view: "main", panel: c, near: notes }, ['The view does not show the panel of the plugin "blockr.test-notes_plugin", which near names.']);
+    await refuses("move_panel", { view: "main", panel: c, near: notes }, ['The view does not show the panel of the plugin "notes_plugin of blockr.test", which near names.']);
     await refuses("move_panel", { view: "main", panel: c, near: edit, side: "below" }, [
-      'The view shows the panel of the plugin "blockr.core-edit_board_plugin", which near names, on a rail, which takes a panel only within.',
+      'The view shows the panel of the plugin "edit_board_plugin of blockr.core", which near names, on a rail, which takes a panel only within.',
     ]);
     expect(dock()).toEqual(state);
   });
 });
 
-describe("blockr.dock-resize_panel", () => {
+describe("resize_panel", () => {
   test("sets the share of the tab group that holds a panel, or the width of its rail", async () => {
     const { dock, run } = await start();
 
@@ -547,7 +570,7 @@ describe("blockr.dock-resize_panel", () => {
   });
 });
 
-describe("blockr.dock-activate_panel", () => {
+describe("activate_panel", () => {
   test("has the tab group that holds a panel show it, without an undo step", async () => {
     const { core, dock, run } = await start();
     await run("activate_panel", { view: "main", panel: a });
@@ -556,7 +579,7 @@ describe("blockr.dock-activate_panel", () => {
   });
 });
 
-describe("blockr.dock-show_panel", () => {
+describe("show_panel", () => {
   test("has the active view show a panel that it holds, and places one that it lacks at the default place", async () => {
     const { dock, run } = await start();
 
@@ -565,6 +588,18 @@ describe("blockr.dock-show_panel", () => {
 
     await run("show_panel", { panel: notes });
     expect(dock().views.main?.grid.children[1]).toEqual({ panels: [c, notes], active: notes });
+  });
+
+  test("takes a plugin by the Id of its class, as the frontend's show() passes it, which the state holds as its record", async () => {
+    const { dock, run } = await start();
+    const notesById: Panel = { plugin: id("blockr.test", "notes_plugin") };
+    const editById: Panel = { plugin: id("blockr.core", "edit_board_plugin") };
+
+    await run("show_panel", { panel: notesById });
+    expect(dock().views.main?.grid.children[1]).toEqual({ panels: [c, notes], active: notes });
+    expect(JSON.parse(JSON.stringify(dock()))).toEqual(dock());
+    await run("show_panel", { panel: editById });
+    expect(dock().views.main?.grid.rails?.left).toEqual(rail(edit));
   });
 
   test("shows the panel in the active view alone, and switches no view", async () => {
@@ -614,7 +649,7 @@ describe("blockr.dock-show_panel", () => {
 
   test("opens the rail of the active view alone while sync_rails is off", async () => {
     const { core, dock, run } = await start({ dockState: collapsed });
-    await core.commands.run("blockr.core-set_option", { id: "sync_rails", value: false });
+    await core.commands.run(id("blockr.core", "set_option"), { id: "sync_rails", value: false });
 
     await run("show_panel", { panel: edit });
     expect(dock().views.main?.grid.rails?.left).toEqual({ ...rail(notes, edit), active: edit });
@@ -623,7 +658,7 @@ describe("blockr.dock-show_panel", () => {
 
   test("on a locked board, only has the active view show a panel that it holds, opening its rail", async () => {
     const { dock, preflight, run } = await start({ dockState: collapsed, locked: true });
-    expect(preflight("show_panel", { panel: { plugin: "blockr.test-chat_plugin" } })).toBe(false);
+    expect(preflight("show_panel", { panel: { plugin: { package: "blockr.test", id: "chat_plugin" } } })).toBe(false);
 
     await run("show_panel", { panel: a });
     expect(dock().views.main?.grid.children[0]).toEqual({ panels: [a, b], active: a });
@@ -632,7 +667,7 @@ describe("blockr.dock-show_panel", () => {
   });
 });
 
-describe("blockr.dock-set_grid", () => {
+describe("set_grid", () => {
   test("sets a view's whole grid, which one undo takes back", async () => {
     const { core, dock, run } = await start();
     const grid: Grid = { orientation: "vertical", children: [group(c), group(a)], sizes: [0.3, 0.7] };
@@ -674,7 +709,7 @@ describe("blockr.dock-set_grid", () => {
 
   test("reads dock_grid_size_tol as a number of 0 or more, and from the string that an environment variable sets", async () => {
     // Core logs each command that fails.
-    const taken = expectedErrors(/The command "blockr\.dock-set_grid" failed/);
+    const taken = expectedErrors(/The command "set_grid of blockr\.dock" failed/);
     const jittered: Grid = { ...main, children: [{ panels: [a, b], active: a }, group(c)], sizes: [0.503, 0.497] };
 
     const loose = await start({ blockrOptions: { dock_grid_size_tol: "0.02" } });
@@ -696,7 +731,7 @@ describe("blockr.dock-set_grid", () => {
   });
 });
 
-describe("blockr.dock-collapse_rail", () => {
+describe("collapse_rail", () => {
   test("collapses the rail on an edge of every view that has one while sync_rails is on, without an undo step", async () => {
     const { core, dock, run } = await start();
 
@@ -712,7 +747,7 @@ describe("blockr.dock-collapse_rail", () => {
 
   test("collapses the rail of the view alone while sync_rails is off", async () => {
     const { core, dock, run } = await start();
-    await core.commands.run("blockr.core-set_option", { id: "sync_rails", value: false });
+    await core.commands.run(id("blockr.core", "set_option"), { id: "sync_rails", value: false });
 
     await run("collapse_rail", { view: "main", edge: "left", collapsed: true });
     expect(dock().views.main?.grid.rails?.left?.collapsed).toBe(true);
@@ -807,16 +842,16 @@ describe("the commands for panels and rails on a locked board", () => {
 
   test("fail to move a panel where a blockr option of the lock holds no logical", async () => {
     // Core logs the command that fails.
-    const taken = expectedErrors(/The command "blockr\.dock-move_panel" failed/);
+    const taken = expectedErrors(/The command "move_panel of blockr\.dock" failed/);
     const { run } = await start({ locked: true, blockrOptions: { lock_rearrange: "maybe" } });
     await expect(run("move_panel", { view: "main", panel: c, near: a })).rejects.toThrow(
-      'The command "blockr.dock-move_panel" failed\n- The blockr option lock_rearrange is "maybe", where it takes TRUE or FALSE.',
+      'The command "move_panel of blockr.dock" failed\n- The blockr option lock_rearrange is "maybe", where it takes TRUE or FALSE.',
     );
     expect(taken).toHaveLength(1);
   });
 });
 
-describe("blockr.dock-set_sections", () => {
+describe("set_sections", () => {
   test("sets the sections of a block's card, and removes its entry where both show, which one undo takes back", async () => {
     const { core, dock, run } = await start();
 

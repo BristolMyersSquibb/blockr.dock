@@ -22,7 +22,7 @@
 //   Its link "Show panel" makes the first view of the navigation that holds
 //   the panel the active one and shows the panel there. Where no view holds
 //   the panel, the link shows it in the active view, which adds it at the
-//   default place, as blockr.dock-show_panel does.
+//   default place, as the dock's command show_panel does.
 //   The toast goes once the active view holds the panel, since the panel's
 //   tab then shows a dot (./dock.tsx). It comes back, with its five seconds
 //   anew for a message, where the active view changes to one that holds no
@@ -41,7 +41,8 @@ import { useBoard } from "@blockr/core/react";
 import { useSyncExternalStore } from "react";
 import type { ReactElement } from "react";
 import { dockState } from "../../commands/index.ts";
-import { places, viewOrder } from "../../state/index.ts";
+import { idText, places, viewOrder } from "../../state/index.ts";
+import type { Panel } from "../../state/index.ts";
 import { runEdit } from "./context.ts";
 import type { Batch } from "./context.ts";
 import { asToast, panelPlugin } from "./notifications.ts";
@@ -222,7 +223,8 @@ export function createToasts(
 
 // What the first line of a toast names: the board object that its
 // notification concerns, by the name that the page shows for it, or the board
-// for none. A board object that core no longer knows goes by its id.
+// for none. A board object that core no longer knows goes by its id, a
+// plugin's by the id of its class, as core's messages name an id.
 export function concerned(
   about: BoardObject | undefined,
   core: {
@@ -233,7 +235,7 @@ export function concerned(
 ): string {
   if (about === undefined) return "Board";
   if ("option" in about) return `Board option "${own(core.options.registered(), about.option)?.label ?? about.option}"`;
-  if ("plugin" in about) return `Plugin "${own(core.plugins.appPlugins(), about.plugin)?.name ?? about.plugin}"`;
+  if ("plugin" in about) return `Plugin "${core.plugins.appPlugins().get(about.plugin)?.name ?? idText(about.plugin)}"`;
   if ("stack" in about) return `Stack "${own(board.stacks, about.stack)?.name ?? about.stack}"`;
   const block = (id: string): string => `"${own(board.blocks, id)?.name ?? id}"`;
   if ("block" in about) return `Block ${block(about.block)}`;
@@ -254,34 +256,32 @@ function own<T>(record: Readonly<Record<string, T>>, key: string): T | undefined
   return Object.hasOwn(record, key) ? record[key] : undefined;
 }
 
-// The dock's commands that the link of a toast runs to show a plugin's panel.
-const ACTIVATE_VIEW = "blockr.dock-activate_view";
-const SHOW_PANEL = "blockr.dock-show_panel";
-
 // The commands that show the plugin's panel, which the link of a toast runs as
 // one step: they make the first view of the navigation that holds the panel
 // the active one, where it is not, and show the panel there, or, where no view
 // holds the panel, show it in the active view, which adds it at the default
 // place.
-// Neither command takes an undo step, so the step takes none.
-// Where no view holds the panel and blockr.dock-show_panel fails its
-// preflight, as on a locked board, the dock cannot show the panel, so the
-// toast has no link.
+// They are the dock's commands activate_view and show_panel, neither of which
+// takes an undo step, so the step takes none.
+// Where no view holds the panel and show_panel fails its preflight, as on a
+// locked board, the dock cannot show the panel, so the toast has no link.
 export function panelShowing(
   board: Board,
   plugin: PluginClassId,
-  commands: Pick<CoreApi["commands"], "preflight">,
+  core: { readonly id: CoreApi["id"]; readonly commands: Pick<CoreApi["commands"], "preflight"> },
 ): Batch | undefined {
   const state = dockState(board);
   if (state === undefined) return undefined;
-  const panel = { plugin };
-  const show = { id: SHOW_PANEL, args: { panel } };
+  // The args hold the plugin's Id as the record that it serializes as.
+  const panel: Panel = { plugin };
+  const showPanel = core.id("blockr.dock", "show_panel");
+  const show = { id: showPanel, args: { panel } };
   const view = viewOrder(state).find((id) => {
     const held = state.views[id];
     return held !== undefined && places(held.grid, panel);
   });
-  if (view === undefined) return commands.preflight(SHOW_PANEL, { panel }) ? [show] : undefined;
-  return view === state.active ? [show] : [{ id: ACTIVATE_VIEW, args: { view } }, show];
+  if (view === undefined) return core.commands.preflight(showPanel, { panel }) ? [show] : undefined;
+  return view === state.active ? [show] : [{ id: core.id("blockr.dock", "activate_view"), args: { view } }, show];
 }
 
 export interface ToastListProps {
@@ -304,7 +304,7 @@ export function ToastList({ core, toasts, drawn }: ToastListProps): ReactElement
     <section className="blockr-dock-toasts" aria-label="Notifications">
       {list.map((toast) => {
         const plugin = panelPlugin(toast.notification, drawn);
-        const showing = plugin === undefined ? undefined : panelShowing(board, plugin, core.commands);
+        const showing = plugin === undefined ? undefined : panelShowing(board, plugin, core);
         return (
           <ToastItem
             key={toast.notification.id}

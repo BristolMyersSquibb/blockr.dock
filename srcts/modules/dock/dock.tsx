@@ -65,9 +65,10 @@ import type { ReactElement } from "react";
 import { activeView } from "../../commands/index.ts";
 import { PANEL_COMPONENT, panelFromId } from "../../layout/index.ts";
 import type { PanelParams } from "../../layout/index.ts";
-import { gridPanels } from "../../state/index.ts";
+import { gridPanels, idText } from "../../state/index.ts";
+import type { IdRecord } from "../../state/index.ts";
 import { bindTip, BlockCard, createTooltips, useTooltip } from "./card/index.ts";
-import { DockContext, giveFocus, useDock } from "./context.ts";
+import { DockContext, giveFocus, panelClass, useDock } from "./context.ts";
 import { drawDock } from "./drawing.ts";
 import { LockIcon } from "./icons.tsx";
 import { Mounted } from "./mounted.tsx";
@@ -87,16 +88,19 @@ function PanelFrame({ params }: IDockviewPanelProps<PanelParams>): ReactElement 
       <BlockCard id={panel.block} />
     </div>
   ) : (
-    <PluginFrame plugin={panel.plugin} />
+    <PluginFrame panel={panel} />
   );
 }
 
 // The frame of a plugin's panel, which holds the plugin's UI while dockview
 // draws the panel (./mounted.tsx).
-function PluginFrame({ plugin }: { readonly plugin: PluginClassId }): ReactElement {
+// It names the plugin's class in `data-plugin`, as core's messages name an id.
+// Core makes one Id for each pair, so the frame mounts the plugin once.
+function PluginFrame({ panel }: { readonly panel: { readonly plugin: IdRecord } }): ReactElement {
   const { core } = useDock();
+  const plugin = panelClass(core, panel);
   const mount = useCallback((el: HTMLElement) => core.mountPlugin(el, plugin), [core, plugin]);
-  return <Mounted mount={mount} className="blockr-dock-panel" data={{ "data-plugin": plugin }} />;
+  return <Mounted mount={mount} className="blockr-dock-panel" data={{ "data-plugin": idText(plugin) }} />;
 }
 
 const components: IDockviewReactProps["components"] = { [PANEL_COMPONENT]: PanelFrame };
@@ -105,7 +109,7 @@ const components: IDockviewReactProps["components"] = { [PANEL_COMPONENT]: Panel
 function Tab(props: IDockviewPanelHeaderProps<PanelParams>): ReactElement {
   const { core } = useDock();
   const { panel } = props.params;
-  if ("plugin" in panel) return <PluginTab {...props} plugin={panel.plugin} />;
+  if ("plugin" in panel) return <PluginTab {...props} plugin={panelClass(core, panel)} />;
   return (
     <DockviewDefaultTab
       {...props}
@@ -172,17 +176,19 @@ function AddPanelButton({ api, group }: IDockviewHeaderActionsProps): ReactEleme
 }
 
 // Whether the active view shows no panel that the dock draws.
-function showsNothing(board: Board, drawn: ReadonlyMap<PluginClassId, string>): boolean {
+function showsNothing(core: Pick<CoreApi, "id">, board: Board, drawn: ReadonlyMap<PluginClassId, string>): boolean {
   const view = activeView(board);
   if (view === undefined) return false;
-  return !gridPanels(view.grid).some((panel) => ("block" in panel ? Object.hasOwn(board.blocks, panel.block) : drawn.has(panel.plugin)));
+  return !gridPanels(view.grid).some((panel) =>
+    "block" in panel ? Object.hasOwn(board.blocks, panel.block) : drawn.has(panelClass(core, panel)),
+  );
 }
 
 // What the dock shows over an empty view.
 function EmptyView(): ReactElement | null {
   const { core, drawn } = useDock();
   const board = useBoard(core);
-  if (!showsNothing(board, drawn)) return null;
+  if (!showsNothing(core, board, drawn)) return null;
   if (!core.lock.board) return <EmptyPrompt />;
   return (
     <div className="blockr-dock-empty">

@@ -17,7 +17,7 @@
 // panel" button of an empty view.
 // One picker serves them all.
 // It opens at the button that the user pressed.
-// A pick runs blockr.dock-add_panel on the active view.
+// A pick runs the dock's command add_panel on the active view.
 // From a tab group's "+", the pick goes near the panel that the group shows,
 // so the panel becomes a new tab in that group.
 // From an empty view, the panel goes to the default place.
@@ -30,7 +30,7 @@ import type { ButtonProps } from "@blockr/ui";
 import { createContext, useContext, useId, useMemo, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { activeView, dockState } from "../../commands/index.ts";
-import { places } from "../../state/index.ts";
+import { idText, places } from "../../state/index.ts";
 import type { Panel } from "../../state/index.ts";
 import { Mark } from "./card/index.ts";
 import { useDock } from "./context.ts";
@@ -103,7 +103,8 @@ export function usePickerButton(near: () => Panel | undefined): ButtonProps {
 // of the plugins given: those that the active view does not show, none where
 // there is no active view.
 // A row's key names its block or its plugin, as "block:a", so that no block's
-// row shares its key with a plugin's.
+// row shares its key with a plugin's, which names the plugin's class as core's
+// messages name an id, as "plugin:edit_board_plugin of blockr.core".
 function pickerGroups(
   board: Board,
   registry: BlockRegistry,
@@ -114,7 +115,7 @@ function pickerGroups(
   if (view === undefined) return [];
   const blocks = Object.entries(board.blocks).flatMap(([block, held]) => {
     if (places(view.grid, { block })) return [];
-    const entry = registry[held.registry_id];
+    const entry = registry.get(held.registry_id);
     return [
       {
         key: `block:${block}`,
@@ -133,9 +134,9 @@ function pickerGroups(
       ? []
       : [
           {
-            key: `plugin:${plugin}`,
+            key: `plugin:${idText(plugin)}`,
             label: name,
-            search: plugin,
+            search: idText(plugin),
             onPick: () => {
               pick({ plugin });
             },
@@ -159,7 +160,7 @@ function PanelMenu({ picking, onClose }: { readonly picking: Picking; readonly o
       const view = dockState(core.store.board())?.active ?? null;
       if (view === null) return;
       const args: Json = near === undefined ? { view, panel } : { view, panel, near, side: "within" };
-      core.commands.run("blockr.dock-add_panel", args).catch(() => {
+      core.commands.run(core.id("blockr.dock", "add_panel"), args).catch(() => {
         // Core tells the user why the board refused the command.
       });
     };

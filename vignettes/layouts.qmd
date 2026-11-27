@@ -301,8 +301,8 @@ board <- new_board(
 ```
 
 The script gives core's Edit board plugin the name `edit`, and the left rail of the view `main` holds the plugin's panel.
-A grid may name a plugin by the id of its class instead, as `plg("blockr.core-edit_board_plugin")`.
-As `new_board()` builds the board, the dock names each plugin by the id of its class, as `board_views()` shows:
+A grid may name a plugin by its class instead, with the class's package, as `plg("edit_board_plugin", package = "blockr.core")`.
+As `new_board()` builds the board, the dock names each plugin by the package and the id of its class, as `board_views()` shows:
 
 ```{r}
 board_views(board)
@@ -408,8 +408,8 @@ new_board(
 )
 ```
 
-It refuses a grid that names a block that the board lacks, and a `plg()` that names neither a plugin of the board's `plugins` nor a plugin class, by an id of the form `{pkg}-{id}`.
-It refuses no such id, since a grid may name a plugin that the app runs without the board holding it.
+It refuses a grid that names a block that the board lacks, and a `plg()` without a package that names no plugin of the board's `plugins`.
+It refuses no plugin class, since a grid may name a plugin that the app runs without the board holding it.
 
 ## Reading the views of a board
 

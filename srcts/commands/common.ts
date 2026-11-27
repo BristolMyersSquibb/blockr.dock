@@ -9,14 +9,15 @@ import { logicalOption, numericOption } from "../options/index.ts";
 import { gridFailures, gridPanels, inFolder, isDockState, pointer, sameEntry } from "../state/index.ts";
 import type { DockState, Entry, FolderId, Grid, Panel, View } from "../state/index.ts";
 
-// The id of the dock plugin's class, under which the board holds the dock's
-// state, at /plugins/blockr.dock-dock_plugin.
-export const DOCK = "blockr.dock-dock_plugin";
+// The package and the id of the dock plugin's class, under which the board
+// holds the dock's state, at /plugins/blockr.dock/dock_plugin.
+// A command gets no `core` to make the class's Id, so the two stay strings.
+export const DOCK = { package: "blockr.dock", id: "dock_plugin" } as const;
 
 // The dock's state on the board, or undefined where the board holds none of
 // its shape, as where the app does not run the dock.
 export function dockState(board: Board): DockState | undefined {
-  const state = board.plugins[DOCK];
+  const state = board.plugins[DOCK.package]?.[DOCK.id];
   return isDockState(state) ? state : undefined;
 }
 
@@ -30,7 +31,7 @@ export function activeView(board: Board): View | undefined {
 // The JSON Pointer from the board's root to the segments given, inside the
 // dock's state.
 export function at(...segments: string[]): string {
-  return pointer(["plugins", DOCK, ...segments]);
+  return pointer(["plugins", DOCK.package, DOCK.id, ...segments]);
 }
 
 // A command of the dock's, whose args are an A, as its schema has them.

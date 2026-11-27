@@ -1,5 +1,5 @@
 dock_state_of <- function(board) {
-  plugin_state(board_plugins(board)[["blockr.dock-dock_plugin"]])
+  plugin_state(board_plugins(board)[["blockr.dock"]][["dock_plugin"]])
 }
 
 test_that("a board of core's holds the dock's state among its plugins", {
@@ -13,7 +13,8 @@ test_that("a board of core's holds the dock's state among its plugins", {
 
   expect_s3_class(board, "board", exact = TRUE)
   expect_identical(board_id(board), "my_board")
-  expect_named(board_plugins(board), "blockr.dock-dock_plugin")
+  expect_named(board_plugins(board), "blockr.dock")
+  expect_named(board_plugins(board)[["blockr.dock"]], "dock_plugin")
   expect_named(dock_state_of(board), c("views", "folders", "active", "visible"))
 })
 
@@ -42,7 +43,7 @@ test_that("plg() names a plugin by its name in `plugins` or by its class", {
           v = dock_view(
             dock_grid(
               "a", "edit",
-              plg("edit"), plg("blockr.core-file_storage_plugin")
+              plg("edit"), plg("file_storage_plugin", package = "blockr.core")
             )
           )
         )
@@ -57,8 +58,8 @@ test_that("plg() names a plugin by its name in `plugins` or by its class", {
     list(
       list(block = "a"),
       list(block = "edit"),
-      list(plugin = "blockr.core-edit_board_plugin"),
-      list(plugin = "blockr.core-file_storage_plugin")
+      list(plugin = list(package = "blockr.core", id = "edit_board_plugin")),
+      list(plugin = list(package = "blockr.core", id = "file_storage_plugin"))
     )
   )
 
@@ -81,7 +82,7 @@ test_that("the default grid of a view tells a plugin's panel by its name", {
     )
   )
 
-  edit <- list(plugin = "blockr.core-edit_board_plugin")
+  edit <- list(plugin = list(package = "blockr.core", id = "edit_board_plugin"))
 
   expect_identical(
     dock_state_of(board)$views$v$grid$children,
@@ -102,7 +103,7 @@ test_that("a plugin placed by its name and by its class is placed twice", {
             v = dock_view(
               dock_grid(
                 plg("edit"),
-                rail(plg("blockr.core-edit_board_plugin"))
+                rail(plg("edit_board_plugin", package = "blockr.core"))
               )
             )
           )
@@ -111,8 +112,8 @@ test_that("a plugin placed by its name and by its class is placed twice", {
       )
     ),
     paste(
-      "The grid of the view v places the plugin blockr.core-edit_board_plugin",
-      "more than once."
+      "The grid of the view v places the plugin edit_board_plugin of",
+      "blockr.core more than once."
     ),
     fixed = TRUE,
     class = "dock_grid_panel_duplicated"
@@ -127,7 +128,9 @@ test_that("the dock refuses a plg() that names no plugin and no class", {
         new_dock_plugin(
           views = list(
             v = dock_view(dock_grid(plg("dga"), plg("edit"))),
-            w = dock_view(list(plg("x"), plg("blockr.core-edit_board_plugin")))
+            w = dock_view(
+              list(plg("x"), plg("edit_board_plugin", package = "blockr.core"))
+            )
           )
         ),
         files = new_file_storage_plugin()
@@ -142,16 +145,16 @@ test_that("the dock refuses a plg() that names no plugin and no class", {
     class = "dock_plugin_name_unknown"
   )
 
-  # The id of a plugin class goes unchecked, since serve() may add the class,
-  # as do the Edit board plugin's, which keeps no state.
+  # A plugin class goes unchecked, since serve() may add the class, as it does
+  # the Edit board plugin's, which keeps no state.
   board <- new_board(
     plugins = list(
       new_dock_plugin(
         views = list(
           v = dock_view(
             list(
-              plg("blockr.core-file_storage_plugin"),
-              plg("blockr.core-edit_board_plugin")
+              plg("file_storage_plugin", package = "blockr.core"),
+              plg("edit_board_plugin", package = "blockr.core")
             )
           )
         )
@@ -162,8 +165,8 @@ test_that("the dock refuses a plg() that names no plugin and no class", {
   expect_identical(
     grid_panels(dock_state_of(board)$views$v$grid),
     list(
-      list(plugin = "blockr.core-file_storage_plugin"),
-      list(plugin = "blockr.core-edit_board_plugin")
+      list(plugin = list(package = "blockr.core", id = "file_storage_plugin")),
+      list(plugin = list(package = "blockr.core", id = "edit_board_plugin"))
     )
   )
 })
@@ -239,7 +242,7 @@ test_that("board_views() reads views that new_dock_plugin() takes back", {
   expect_true(is_dock_grid(views$main$grid))
   expect_identical(
     grid_panels(views$main$grid),
-    list(blk("a"), blk("b"), plg("blockr.core-edit_board_plugin"))
+    list(blk("a"), blk("b"), plg("edit_board_plugin", package = "blockr.core"))
   )
   expect_identical(active_view(full), "side")
 
@@ -322,7 +325,7 @@ test_that("the readers give what a board of one of its views needs", {
   # The board of the view main, as CEDX's script of one view builds one, which
   # `new_board()` would refuse with the entry of `visible` for the block c.
   plugins <- board_plugins(full)
-  plugins[["blockr.dock-dock_plugin"]] <- new_dock_plugin(
+  plugins[["blockr.dock"]][["dock_plugin"]] <- new_dock_plugin(
     views = views["main"],
     visible = visible[names(visible) %in% keep]
   )

@@ -2,16 +2,21 @@
 // what it has on screen.
 
 import type { Block, Board, Patch } from "@blockr/core";
+import { id } from "@blockr/core/stubs";
 import { describe, expect, test } from "vitest";
 import { patched, RAIL_SIZE } from "../../state/index.ts";
 import type { DockState, Grid, Panel, TabGroup, View } from "../../state/index.ts";
 import { onScreen } from "./demand.ts";
 import { PAGE_ID, startingPatches, urlView } from "./start.ts";
 
-const DOCK = "blockr.dock-dock_plugin";
-const EDIT = "blockr.core-edit_board_plugin";
+const DOCK = id("blockr.dock", "dock_plugin");
 
-const head: Block = { registry_id: "blockr.core-head_block", state: {}, name: "Head", locked: null };
+// The class of core's Edit board plugin, by the Id that core makes of it, and
+// as the dock's state holds it, a plain record, which is no object of core's.
+const EDIT = id("blockr.core", "edit_board_plugin");
+const EDIT_PANEL: Panel = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
+
+const head: Block = { registry_id: id("blockr.core", "head_block"), state: {}, name: "Head", locked: null };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -31,20 +36,20 @@ function boardWith(state: DockState, blocks: readonly string[] = ["a", "b"]): Bo
     links: {},
     stacks: {},
     options: {},
-    plugins: { [DOCK]: state },
+    plugins: { [DOCK.package]: { [DOCK.id]: state } },
   };
 }
 
 // The dock's state after the patches.
 function after(board: Board, patches: readonly Patch[]): unknown {
-  return patched(board.plugins[DOCK] ?? null, patches, DOCK);
+  return patched(board.plugins[DOCK.package]?.[DOCK.id] ?? null, patches, DOCK);
 }
 
 const empty: DockState = { views: {}, folders: {}, active: null, visible: {} };
 
 const twoViews: DockState = {
   views: {
-    main: view({ orientation: "horizontal", children: [group({ block: "a" }, { plugin: EDIT })], sizes: [1] }, "a0"),
+    main: view({ orientation: "horizontal", children: [group({ block: "a" }, EDIT_PANEL)], sizes: [1] }, "a0"),
     side: view({ orientation: "horizontal", children: [group({ block: "b" })], sizes: [1] }, "a1"),
   },
   folders: {},
@@ -67,7 +72,7 @@ describe("startingPatches()", () => {
             orientation: "horizontal",
             children: [group({ block: "a" }, { block: "b" })],
             sizes: [1],
-            rails: { left: { ...group({ plugin: EDIT }), collapsed: false, size: RAIL_SIZE } },
+            rails: { left: { ...group(EDIT_PANEL), collapsed: false, size: RAIL_SIZE } },
           },
         },
       },
@@ -88,7 +93,7 @@ describe("startingPatches()", () => {
     expect(after(board, startingPatches(board, [], undefined))).toMatchObject({ views: { [PAGE_ID]: { index: "a1" } } });
   });
 
-  test("removes from every view the panels of plugins that the dock cannot draw", () => {
+  test("removes from every view the panels of plugins that the dock cannot draw, by the package and the id of each one's class", () => {
     const board = boardWith(twoViews);
     expect(after(board, startingPatches(board, [], undefined))).toEqual({
       ...twoViews,
@@ -128,11 +133,12 @@ describe("urlView()", () => {
 });
 
 describe("onScreen()", () => {
+  const core = { id };
   const drawn = new Map([[EDIT, "Edit board"]]);
   const rail = { ...group({ block: "c" }, { block: "d" }), collapsed: false, size: 260 };
   const main: Grid = {
     orientation: "horizontal",
-    children: [{ panels: [{ block: "a" }, { block: "b" }], active: { block: "b" } }, group({ plugin: EDIT })],
+    children: [{ panels: [{ block: "a" }, { block: "b" }], active: { block: "b" } }, group(EDIT_PANEL)],
     sizes: [0.5, 0.5],
     rails: { left: rail },
   };
@@ -140,25 +146,29 @@ describe("onScreen()", () => {
   const blocks = ["a", "b", "c", "d"];
 
   test("gives the blocks and the plugins whose panels the tab groups and the open rails of the active view show", () => {
-    expect(onScreen(boardWith(state, blocks), drawn, false)).toEqual({ blocks: ["b", "c"], plugins: [EDIT] });
+    const shown = onScreen(core, boardWith(state, blocks), drawn, false);
+    expect(shown).toEqual({ blocks: ["b", "c"], plugins: [EDIT] });
+    // It gives each plugin by core's Id, which core finds the plugin by.
+    expect(shown.plugins[0]).toBe(EDIT);
   });
 
   test("leaves out the panel that a collapsed rail shows, but in the narrow column", () => {
     const collapsed = { ...state, views: { ...state.views, main: view({ ...main, rails: { left: { ...rail, collapsed: true } } }) } };
-    expect(onScreen(boardWith(collapsed, blocks), drawn, false)).toEqual({ blocks: ["b"], plugins: [EDIT] });
-    expect(onScreen(boardWith(collapsed, blocks), drawn, true)).toEqual({ blocks: ["b", "c"], plugins: [EDIT] });
+    expect(onScreen(core, boardWith(collapsed, blocks), drawn, false)).toEqual({ blocks: ["b"], plugins: [EDIT] });
+    expect(onScreen(core, boardWith(collapsed, blocks), drawn, true)).toEqual({ blocks: ["b", "c"], plugins: [EDIT] });
   });
 
   test("gives the blocks and the plugins of the active view alone", () => {
-    expect(onScreen(boardWith({ ...state, active: "side" }, blocks), drawn, false)).toEqual({ blocks: ["b"], plugins: [] });
+    expect(onScreen(core, boardWith({ ...state, active: "side" }, blocks), drawn, false)).toEqual({ blocks: ["b"], plugins: [] });
   });
 
   test("gives the first panel of a tab group whose shown panel the dock cannot draw", () => {
-    const grid: Grid = { orientation: "horizontal", children: [{ panels: [{ plugin: "gone" }, { block: "a" }], active: { plugin: "gone" } }], sizes: [1] };
-    expect(onScreen(boardWith({ ...state, views: { main: view(grid) } }, blocks), drawn, false)).toEqual({ blocks: ["a"], plugins: [] });
+    const gone: Panel = { plugin: { package: "blockr.gone", id: "gone_plugin" } };
+    const grid: Grid = { orientation: "horizontal", children: [{ panels: [gone, { block: "a" }], active: gone }], sizes: [1] };
+    expect(onScreen(core, boardWith({ ...state, views: { main: view(grid) } }, blocks), drawn, false)).toEqual({ blocks: ["a"], plugins: [] });
   });
 
   test("gives no block and no plugin where no view is active", () => {
-    expect(onScreen(boardWith(empty), drawn, false)).toEqual({ blocks: [], plugins: [] });
+    expect(onScreen(core, boardWith(empty), drawn, false)).toEqual({ blocks: [], plugins: [] });
   });
 });

@@ -183,6 +183,24 @@ test_that("dock_grid() returns its grid visibly, so that it prints", {
   expect_visible(dock_grid("a"))
 })
 
+test_that("the print names a plugin's class by its package and its id", {
+
+  grid <- dock_grid(
+    "a",
+    rail(plg("edit_board_plugin", package = "blockr.core"))
+  )
+
+  expect_output(
+    print(grid),
+    "left rail: edit_board_plugin of blockr.core (plugin)",
+    fixed = TRUE
+  )
+  expect_identical(
+    str_value(grid),
+    "<dock_grid> a, edit_board_plugin of blockr.core"
+  )
+})
+
 test_that("str_value.dock_grid lists the ids of the panels", {
 
   grid <- dock_grid("b", blk("a"), rail(plg("edit")))

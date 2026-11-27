@@ -70,8 +70,7 @@ export interface Mark {
 
 // Where a view or folder that a drag moves lands: in a folder, or at the top
 // for null, before the view or folder that `before` names, or last where it
-// names none, as the dock's commands blockr.dock-move_view and
-// blockr.dock-move_folder take it.
+// names none, as the dock's commands move_view and move_folder take it.
 export interface Drop {
   readonly folder: FolderId | null;
   readonly before: Entry | undefined;

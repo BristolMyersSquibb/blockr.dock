@@ -11,7 +11,7 @@ import { isList, isObject } from "./json.ts";
 
 // The JSON Pointer to the segments given, from the board's root.
 // It writes "~" as "~0" and "/" as "~1", and gives
-// "/plugins/blockr.dock-dock_plugin" for ["plugins", "blockr.dock-dock_plugin"].
+// "/plugins/blockr.dock/dock_plugin" for ["plugins", "blockr.dock", "dock_plugin"].
 export function pointer(segments: readonly string[]): string {
   return segments.map((segment) => `/${segment.replaceAll("~", "~0").replaceAll("/", "~1")}`).join("");
 }
@@ -29,6 +29,9 @@ function segmentsFromPath(path: string): string[] | undefined {
 // It applies the patches that change the plugin's state, in order, to
 // `state`, the plugin's state in the board before them, and skips the
 // others.
+// The board holds a plugin's state under the package of its class, and then
+// under the class's id within the package, so a patch of the state names the
+// two in its second and third segments.
 // A patch at the plugin's own path replaces the state whole.
 // It gives undefined where a patch cannot apply, as where its path leads to
 // nothing, since the store then refuses the delta.
@@ -36,8 +39,8 @@ export function patched(state: Json, patches: readonly Patch[], plugin: PluginCl
   let at: Json | undefined = state;
   for (const patch of patches) {
     const segments = segmentsFromPath(patch.path);
-    if (segments?.[0] !== "plugins" || segments[1] !== plugin) continue;
-    at = at === undefined ? undefined : applied(at, segments.slice(2), patch);
+    if (segments?.[0] !== "plugins" || segments[1] !== plugin.package || segments[2] !== plugin.id) continue;
+    at = at === undefined ? undefined : applied(at, segments.slice(3), patch);
   }
   return at;
 }

@@ -60,7 +60,7 @@ function taken(state: DockState): (id: string) => boolean {
 
 export const viewCommands = [
   command<AddView>({
-    id: "blockr.dock-add_view",
+    id: "add_view",
     label: "Add view",
     description:
       "Adds a view, under a new id, and makes it the active view. It goes into a folder, or to the top, before the view or folder that `before` names, or at the end. Where no name is given, it is named \"View N\", with N one more than the views there are, or the first N after it that no view's name has. Where no grid is given, it shows nothing.",
@@ -98,7 +98,7 @@ export const viewCommands = [
   }),
 
   command<{ readonly view: ViewId }>({
-    id: "blockr.dock-remove_view",
+    id: "remove_view",
     label: "Remove view",
     description:
       "Removes a view, and makes the first view of the navigation active where the view it removes was. It removes no block, and refuses to remove the last view.",
@@ -118,7 +118,7 @@ export const viewCommands = [
   }),
 
   command<{ readonly view: ViewId; readonly name: string }>({
-    id: "blockr.dock-rename_view",
+    id: "rename_view",
     label: "Rename view",
     description: "Gives a view a new name.",
     args: schemas.object({ view: schemas.view, name: schemas.name("view", "The view's new name.") }, ["view", "name"]),
@@ -130,7 +130,7 @@ export const viewCommands = [
   }),
 
   command<MoveView>({
-    id: "blockr.dock-move_view",
+    id: "move_view",
     label: "Move view",
     description:
       "Moves a view into a folder, or to the top, before the view or folder that `before` names, or at the end of that folder.",
@@ -159,7 +159,7 @@ export const viewCommands = [
   }),
 
   command<{ readonly view: ViewId }>({
-    id: "blockr.dock-activate_view",
+    id: "activate_view",
     label: "Activate view",
     description:
       "Makes a view the active one, which the dock shows. It takes no undo step, since it changes only what the user looks at.",
@@ -173,7 +173,7 @@ export const viewCommands = [
   }),
 
   command<AddFolder>({
-    id: "blockr.dock-add_folder",
+    id: "add_folder",
     label: "Add folder",
     description:
       "Adds a folder, under a new id, which groups views and other folders in the navigation. It goes into a folder, or to the top, before the view or folder that `before` names, or at the end. Where no name is given, it is named \"Folder N\", with N one more than the folders there are, or the first N after it that no folder's name has.",
@@ -201,7 +201,7 @@ export const viewCommands = [
   }),
 
   command<{ readonly folder: FolderId }>({
-    id: "blockr.dock-remove_folder",
+    id: "remove_folder",
     label: "Remove folder",
     description:
       "Removes a folder, and moves the views and folders that it holds up into the folder that held it, in its place and in their order. It removes no view.",
@@ -228,7 +228,7 @@ export const viewCommands = [
   }),
 
   command<{ readonly folder: FolderId; readonly name: string }>({
-    id: "blockr.dock-rename_folder",
+    id: "rename_folder",
     label: "Rename folder",
     description: "Gives a folder a new name.",
     args: schemas.object({ folder: schemas.folder, name: schemas.name("folder", "The folder's new name.") }, ["folder", "name"]),
@@ -242,7 +242,7 @@ export const viewCommands = [
   }),
 
   command<MoveFolder>({
-    id: "blockr.dock-move_folder",
+    id: "move_folder",
     label: "Move folder",
     description:
       "Moves a folder, with what it holds, into another folder, or to the top, before the view or folder that `before` names, or at the end of that folder. It refuses to move a folder into itself or into a folder inside it.",

@@ -6,20 +6,20 @@
 #' The script may name the board's other plugins there, as
 #' `plugins = list(new_dock_plugin(...), edit = new_edit_board_plugin())`,
 #' and a grid then names a plugin's panel by that name, as `plg("edit")`.
-#' A grid may also name a plugin by the id of its class, as
-#' `plg("blockr.core-edit_board_plugin")`, and so name a plugin that the board
-#' does not hold, such as one that keeps no state.
+#' A grid may also name a plugin by its class, with the class's package, as
+#' `plg("edit_board_plugin", package = "blockr.core")`, and so name a plugin
+#' that the board does not hold, such as one that keeps no state.
 #'
 #' As `new_board()` builds the board, the dock completes its state on it,
 #' through its method of [blockr.core::complete_plugin()].
 #' Where a grid names a plugin by the name that the script gives it, the dock
-#' names it by the id of the plugin's class instead, as the board holds the
-#' plugin.
+#' names it by the package and the id of the plugin's class instead, as the
+#' board holds the plugin.
 #' It then refuses, naming each, a grid that places a panel twice, as a grid
-#' does that names one plugin both by its name and by the id of its class.
-#' It refuses a `plg()` whose id is neither the name of one of the board's
-#' plugins nor the id of a plugin class, which has the form `{package}-{id}`.
-#' It refuses no id of that form, since a grid may name a plugin that
+#' does that names one plugin both by its name and by its class.
+#' It refuses a `plg()` without a package whose id is not the name of one of
+#' the board's plugins.
+#' It refuses no plugin class, since a grid may name a plugin that
 #' [blockr.core::serve()] adds to the app.
 #' Last, it refuses a grid or an entry of `visible` that names a block that
 #' the board lacks.
@@ -27,8 +27,8 @@
 #' The readers take a board.
 #' The function `board_views()` reads its views, each as [dock_view()] writes
 #' it, with its grid.
-#' Each grid names its panels with [blk()] and [plg()], the latter by the id
-#' of the plugin's class.
+#' Each grid names its panels with [blk()] and [plg()], the latter by the
+#' package and the id of the plugin's class.
 #' So a script can build one board from another, as
 #' `new_dock_plugin(views = board_views(board)["main"])` does.
 #' The function `active_view()` reads the id of the active view.
@@ -106,14 +106,15 @@ board_visible <- function(x) {
 }
 
 # The dock's state that a board holds, or an empty list where it holds none.
-# The board holds the dock under the id of the dock plugin's class.
+# The board holds its plugins by the package of each one's class, and then by
+# the class's id, so it holds the dock under blockr.dock and dock_plugin.
 board_dock_state <- function(x) {
 
   if (!is_board(x)) {
     blockr_abort("Expecting a board.", class = "dock_board_invalid")
   }
 
-  dock <- board_plugins(x)[[plugin_class_id(new_dock_plugin())]]
+  dock <- board_plugins(x)[["blockr.dock"]][["dock_plugin"]]
 
   if (is.null(dock)) {
     return(list())
@@ -124,12 +125,15 @@ board_dock_state <- function(x) {
 
 # The dock completes its state on the board that `new_board()` builds, which
 # hands it the names that the script gives the board's plugins in `aliases`,
-# each mapped to the id of its plugin's class.
-# Each `plg()` that names a plugin by such a name comes to name it by the id
-# of its class, as the board holds the plugin.
+# each mapped to the package and the id of its plugin's class, as
+# `list(package = "blockr.core", id = "edit_board_plugin")`.
+# Each `plg()` that names a plugin by such a name comes to name it by that
+# list, as the board holds the plugin.
+# A panel that names a class holds such a list already, so the dock looks up
+# only a plugin that a panel names by a string.
 # Then the dock refuses, naming each, a panel that a grid places twice, as a
-# name and the id of a class for one plugin do, a `plg()` that names no plugin
-# of the board and no plugin class, and a block that the board lacks.
+# name and the class of one plugin do, a `plg()` that names no plugin of the
+# board and no plugin class, and a block that the board lacks.
 #' @export
 complete_plugin.dock_plugin <- function(x, board, aliases, ...) {
 
@@ -141,7 +145,7 @@ complete_plugin.dock_plugin <- function(x, board, aliases, ...) {
 
     id <- panel[["plugin"]]
 
-    if (not_null(id) && id %in% names(aliases)) {
+    if (is_string(id) && id %in% names(aliases)) {
       panel[["plugin"]] <- aliases[[id]]
     }
 
@@ -164,16 +168,17 @@ complete_plugin.dock_plugin <- function(x, board, aliases, ...) {
 }
 
 # A `plg()` names a plugin of the board by its name, which the dock has turned
-# into the id of the plugin's class, or a plugin class by its id, which has
-# the form `{package}-{id}`, so the dock refuses, naming each, an id without a
-# package.
+# into the package and the id of the plugin's class, or a plugin class by its
+# package and its id.
+# So a plugin that a panel still names by a string has a name that no plugin
+# of the board has, and the dock refuses, naming each, such a name.
 check_plugin_names <- function(views) {
 
   lines <- chr_mply(
     function(view, id) {
 
-      ids <- unlst(lst_xtr(grid_panels(view[["grid"]]), "plugin"))
-      lost <- unique(ids[!grepl("-", ids, fixed = TRUE)])
+      plugins <- lst_xtr(grid_panels(view[["grid"]]), "plugin")
+      lost <- unique(unlst(Filter(is.character, plugins)))
 
       if (length(lost)) {
         paste0(

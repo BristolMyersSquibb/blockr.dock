@@ -18,8 +18,8 @@
 // takes none either, even where it adds the panel, since showing takes none
 // under any frontend.
 // Where the panel sits on a collapsed rail, showing it opens the rail as
-// blockr.dock-collapse_rail does, so on every view that has a rail on that
-// edge while the board option sync_rails is on.
+// collapse_rail does, so on every view that has a rail on that edge while the
+// board option sync_rails is on.
 //
 // On a locked board, a reader still has a tab group show another panel and
 // opens or collapses a rail, while no command adds or removes a panel.
@@ -127,7 +127,7 @@ function keep(changes: Partial<GridChanges>, locks: LayoutLocks, context: Pick<C
 
 export const panelCommands = [
   command<Placed>({
-    id: "blockr.dock-add_panel",
+    id: "add_panel",
     label: "Add panel",
     description:
       "Places a panel in a view that does not show it, as the tab that its tab group or rail shows: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place, a new tab in the last tab group that holds no plugin's panel.",
@@ -145,7 +145,7 @@ export const panelCommands = [
   }),
 
   command<PanelArgs>({
-    id: "blockr.dock-remove_panel",
+    id: "remove_panel",
     label: "Remove panel",
     description:
       "Takes a panel out of a view, as closing its tab does. It removes no block, and the panel stays in the other views that show it.",
@@ -161,10 +161,10 @@ export const panelCommands = [
   }),
 
   command<Placed, Placed & { readonly locks: LayoutLocks }>({
-    id: "blockr.dock-move_panel",
+    id: "move_panel",
     label: "Move panel",
     description:
-      "Moves a panel within a view that shows it, placed as blockr.dock-add_panel places one: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place.",
+      "Moves a panel within a view that shows it, placed as add_panel places one: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place.",
     args: placeArgs("moves"),
     preflight(board, { view, panel, near }) {
       return shows(board, view, panel) && (near === undefined || !samePanel(near, panel));
@@ -190,7 +190,7 @@ export const panelCommands = [
   }),
 
   command<Resize, Resize & { readonly locks: LayoutLocks }>({
-    id: "blockr.dock-resize_panel",
+    id: "resize_panel",
     label: "Resize panel",
     description:
       "Sets the size of the tab group that holds a panel: its share of the split that holds it, a ratio between 0 and 1, while the other children of the split share the rest in proportion. For a panel on a rail, it sets the rail's width in pixels while it is open.",
@@ -223,7 +223,7 @@ export const panelCommands = [
   }),
 
   command<PanelArgs>({
-    id: "blockr.dock-activate_panel",
+    id: "activate_panel",
     label: "Activate panel",
     description:
       "Has the tab group or rail that holds a panel show it, as clicking its tab does. It takes no undo step, since it changes only what the user looks at.",
@@ -240,7 +240,7 @@ export const panelCommands = [
   }),
 
   command<{ readonly panel: Panel }>({
-    id: "blockr.dock-show_panel",
+    id: "show_panel",
     label: "Show panel",
     description:
       "Shows a panel in the active view, as the dock carries out core's show(): has the tab group or rail that holds it show it, opening the rail where it is collapsed, where the view shows it, and places it at the default place where the view does not, a new tab in the last tab group that holds no plugin's panel. While the board option sync_rails is on, a rail that it opens opens on every view that has a rail on that edge. It never switches views, and takes no undo step, since showing takes none. On a locked board, it only has a tab group or rail show a panel that the view shows.",
@@ -268,7 +268,7 @@ export const panelCommands = [
   }),
 
   command<SetGrid, SetGrid & { readonly locks: LayoutLocks; readonly tolerance: number }>({
-    id: "blockr.dock-set_grid",
+    id: "set_grid",
     label: "Set grid",
     description:
       "Sets a view's whole grid, which says which panels the view shows and where, as the dock does after the user drags a panel or a border. A grid places each panel once, and the shares of each split are above 0 and sum to 1. Where the grid has the same splits and tab groups as the view's, a split keeps its shares unless the grid moves one by more than the blockr option dock_grid_size_tol, 0.005 unless set.",
@@ -291,7 +291,7 @@ export const panelCommands = [
   }),
 
   command<CollapseRail>({
-    id: "blockr.dock-collapse_rail",
+    id: "collapse_rail",
     label: "Collapse rail",
     description:
       "Collapses the rail on an edge of a view, which then shows its tabs alone, or opens it. While the board option sync_rails is on, it does so on every view that has a rail on that edge. It takes no undo step, since it changes only what the user looks at.",

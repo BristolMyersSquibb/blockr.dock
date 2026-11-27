@@ -84,7 +84,7 @@ export async function logicalOption(core: BlockrOptions, name: string, fallback:
 }
 
 // A blockr option read as a number of 0 or more, or `fallback` where nothing
-// sets it, as blockr.dock-set_grid reads dock_grid_size_tol.
+// sets it, as the dock's command set_grid reads dock_grid_size_tol.
 // A string reads as the number that it holds.
 // Any other value, and a number below 0, fails as in logicalOption().
 export async function numericOption(core: BlockrOptions, name: string, fallback: number, refused: string): Promise<number> {

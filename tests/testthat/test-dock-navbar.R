@@ -39,8 +39,12 @@ test_that("each function makes a navbar item of its kind", {
     list(kind = "storage", id = "avatar")
   )
   expect_identical(
-    unclass(navbar_item("deck", "blockr.test-deck_button")),
-    list(kind = "module", id = "deck", module = "blockr.test-deck_button")
+    unclass(navbar_item("deck", "deck_button", package = "blockr.test")),
+    list(
+      kind = "module",
+      id = "deck",
+      module = list(package = "blockr.test", id = "deck_button")
+    )
   )
 })
 
@@ -70,12 +74,23 @@ test_that("the item constructors refuse what the dock cannot draw", {
     class = "navbar_item_href_invalid"
   )
   expect_error(
-    navbar_item("deck", ""),
+    navbar_item("deck", "", package = "blockr.test"),
     "Expecting the module of the navbar item \"deck\"",
     fixed = TRUE,
     class = "navbar_item_module_invalid"
   )
-  expect_error(navbar_item("deck", 1), class = "navbar_item_module_invalid")
+  expect_error(
+    navbar_item("deck", 1, package = "blockr.test"),
+    class = "navbar_item_module_invalid"
+  )
+  expect_error(
+    navbar_item("deck", "deck_button", package = ""),
+    class = "navbar_item_module_invalid"
+  )
+  expect_error(
+    navbar_item("deck", "deck_button", package = NULL),
+    class = "navbar_item_module_invalid"
+  )
 
   # A menu holds links and menus alone
   expect_error(
@@ -264,13 +279,18 @@ test_that("the dock's frontend_args() returns the items of the bar", {
     list(navbar = list())
   )
 
-  # R checks a module's id alone, and leaves it to the client to find the
-  # module
+  # R checks a module's id and package alone, and leaves it to the client to
+  # find the module
+  item <- navbar_item("deck", "deck", package = "blockr.test")
   expect_identical(
-    frontend_args(dock, navbar = navbar_item("deck", "blockr.test-deck"))[[
-      "navbar"
-    ]],
-    list(list(kind = "module", id = "deck", module = "blockr.test-deck"))
+    frontend_args(dock, navbar = item)[["navbar"]],
+    list(
+      list(
+        kind = "module",
+        id = "deck",
+        module = list(package = "blockr.test", id = "deck")
+      )
+    )
   )
 })
 
@@ -354,7 +374,7 @@ test_that("serve() hands navbar to the dock's frontend_args()", {
   expect_error(
     serve(board, foo = 1, bar = no_such_function()),
     paste0(
-      "The app's frontend, blockr.dock-dock_plugin, takes no argument of ",
+      "The app's frontend, dock_plugin of blockr.dock, takes no argument of ",
       "`serve()` but `navbar`, and was given `foo` and `bar`."
     ),
     fixed = TRUE,

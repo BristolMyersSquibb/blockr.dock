@@ -9,7 +9,7 @@
 // (./open-folders.ts).
 // As the menu opens, the folders that hold the active view open, so that the
 // menu shows the active view, whose row it sets as the current pick.
-// A pick of a view runs blockr.dock-activate_view, under every lock.
+// A pick of a view runs the dock's command activate_view, under every lock.
 // The bar shows the active view's name on the menu's button, and a short rule
 // after it sets the menu apart from the parts after it.
 //
@@ -30,8 +30,8 @@
 //   "New folder" adds a folder last at the top. Each opens its new name in a
 //   field.
 // - The row "Show views as tabs" turns the board option view_tabs on and off,
-//   through core's command blockr.core-set_option, as today's row does, and
-//   ends on a check while it is on.
+//   through core's command set_option, as today's row does, and ends on a
+//   check while it is on.
 // Manage mode is a dialog, through whose controls Tab moves, and which Escape
 // closes, but in a field or a row that asks, where Escape gives up the edit or
 // the question alone.
@@ -40,15 +40,15 @@
 // for a line of tabs under it, followed by the menu as a chevron alone, as
 // today.
 // The line holds a tab for each view and folder at the top of the navigation.
-// A view's tab runs blockr.dock-activate_view, and a folder's tab opens a menu
-// of what the folder holds, in which a folder opens and closes as in the
-// views menu, so that the line stays one row however deep the folders go.
+// A view's tab runs activate_view, and a folder's tab opens a menu of what the
+// folder holds, in which a folder opens and closes as in the views menu, so
+// that the line stays one row however deep the folders go.
 // The line marks the active view's tab, or the tab of the folder that holds
 // the active view.
 // Where the tabs outgrow the line, it scrolls sideways, and it brings the
 // marked tab into view as the active view changes.
 
-import type { CoreApi, Json } from "@blockr/core";
+import type { CommandId, CoreApi, Json } from "@blockr/core";
 import { useBoard } from "@blockr/core/react";
 import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, FocusEvent, PointerEvent, ReactElement } from "react";
@@ -64,17 +64,6 @@ import type { OpenFolders } from "./open-folders.ts";
 import { cutTip } from "./tips.ts";
 import { dropAt, rowsOf } from "./views-list.ts";
 import type { Drop, Mark, Row, Span } from "./views-list.ts";
-
-const ACTIVATE_VIEW = "blockr.dock-activate_view";
-const ADD_VIEW = "blockr.dock-add_view";
-const ADD_FOLDER = "blockr.dock-add_folder";
-const RENAME_VIEW = "blockr.dock-rename_view";
-const RENAME_FOLDER = "blockr.dock-rename_folder";
-const REMOVE_VIEW = "blockr.dock-remove_view";
-const REMOVE_FOLDER = "blockr.dock-remove_folder";
-const MOVE_VIEW = "blockr.dock-move_view";
-const MOVE_FOLDER = "blockr.dock-move_folder";
-const SET_OPTION = "blockr.core-set_option";
 
 // How near the top or the bottom edge of manage mode a drag scrolls it, and by
 // how much at each move of the pointer, in pixels.
@@ -167,7 +156,7 @@ function ViewsMenu({ state, openFolders, tabs }: ViewsMenuProps): ReactElement {
             label: "Show views as tabs",
             checked: tabs,
             onSelect: () => {
-              runEdit(core, SET_OPTION, { id: "view_tabs", value: !tabs });
+              runEdit(core, core.id("blockr.core", "set_option"), { id: "view_tabs", value: !tabs });
             },
           },
         ];
@@ -298,7 +287,7 @@ function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }: Manag
   };
 
   const addView = () => {
-    void applied(core, ADD_VIEW, {}).then((done) => {
+    void applied(core, core.id("blockr.dock", "add_view"), {}).then((done) => {
       const added = done ? dockState(core.store.board())?.active : null;
       if (added !== undefined && added !== null) setRenaming(keyOf({ view: added }));
     });
@@ -306,7 +295,7 @@ function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }: Manag
 
   const addFolder = () => {
     const before = new Set(Object.keys(state.folders));
-    void applied(core, ADD_FOLDER, {}).then((done) => {
+    void applied(core, core.id("blockr.dock", "add_folder"), {}).then((done) => {
       const after = done ? Object.keys(dockState(core.store.board())?.folders ?? {}) : [];
       const added = after.find((id) => !before.has(id));
       if (added !== undefined) setRenaming(keyOf({ folder: added }));
@@ -736,7 +725,7 @@ function spansOf(rowList: HTMLElement): Span[] {
 
 // Runs one of the dock's commands as an edit, and gives whether the board
 // took it, where core tells the user why it refused it.
-async function applied(core: CoreApi, id: string, args: Readonly<Record<string, Json>>): Promise<boolean> {
+async function applied(core: CoreApi, id: CommandId, args: Readonly<Record<string, Json>>): Promise<boolean> {
   return await core.commands.run(id, args).then(
     () => true,
     () => false,
@@ -745,24 +734,24 @@ async function applied(core: CoreApi, id: string, args: Readonly<Record<string, 
 
 // Makes a view the active one, unless it is already.
 function activate(core: CoreApi, state: DockState, view: ViewId): void {
-  if (view !== state.active) runEdit(core, ACTIVATE_VIEW, { view });
+  if (view !== state.active) runEdit(core, core.id("blockr.dock", "activate_view"), { view });
 }
 
 function rename(core: CoreApi, entry: Entry, name: string): void {
-  if ("view" in entry) runEdit(core, RENAME_VIEW, { view: entry.view, name });
-  else runEdit(core, RENAME_FOLDER, { folder: entry.folder, name });
+  if ("view" in entry) runEdit(core, core.id("blockr.dock", "rename_view"), { view: entry.view, name });
+  else runEdit(core, core.id("blockr.dock", "rename_folder"), { folder: entry.folder, name });
 }
 
 function remove(core: CoreApi, entry: Entry): void {
-  if ("view" in entry) runEdit(core, REMOVE_VIEW, { view: entry.view });
-  else runEdit(core, REMOVE_FOLDER, { folder: entry.folder });
+  if ("view" in entry) runEdit(core, core.id("blockr.dock", "remove_view"), { view: entry.view });
+  else runEdit(core, core.id("blockr.dock", "remove_folder"), { folder: entry.folder });
 }
 
 // Whether the dock removes a view or a folder: it refuses the last view.
 function removable(core: CoreApi, entry: Entry): boolean {
   return "view" in entry
-    ? core.commands.preflight(REMOVE_VIEW, { view: entry.view })
-    : core.commands.preflight(REMOVE_FOLDER, { folder: entry.folder });
+    ? core.commands.preflight(core.id("blockr.dock", "remove_view"), { view: entry.view })
+    : core.commands.preflight(core.id("blockr.dock", "remove_folder"), { folder: entry.folder });
 }
 
 // Moves a view or a folder where a drop lands, and opens the folder that
@@ -771,7 +760,7 @@ function move(core: CoreApi, openFolders: OpenFolders, entry: Entry, drop: Drop)
   const args: Record<string, Json> =
     "view" in entry ? { view: entry.view, folder: drop.folder } : { folder: entry.folder, into: drop.folder };
   if (drop.before !== undefined) args.before = drop.before;
-  const id = "view" in entry ? MOVE_VIEW : MOVE_FOLDER;
+  const id = core.id("blockr.dock", "view" in entry ? "move_view" : "move_folder");
   if (!core.commands.preflight(id, args)) return;
   if (drop.folder !== null) openFolders.open([drop.folder]);
   runEdit(core, id, args);

@@ -2,6 +2,7 @@
 // a delta and the board before the delta.
 
 import type { Block, Board, Delta, Patch } from "@blockr/core";
+import { id } from "@blockr/core/stubs";
 import { describe, expect, test } from "vitest";
 import { inFolder } from "./navigation.ts";
 import { patched, pointer } from "./patch.ts";
@@ -9,15 +10,16 @@ import { defaultState, isDockState } from "./state.ts";
 import type { DockState, Folder, FolderId, Grid, Panel, TabGroup, View } from "./types.ts";
 import { update } from "./update.ts";
 
-const DOCK = "blockr.dock-dock_plugin";
+// The Id of the dock plugin's class, as the store hands it to the `update`.
+const DOCK = id("blockr.dock", "dock_plugin");
 
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
 const d = { block: "d" };
-const edit = { plugin: "blockr.core-edit_board_plugin" };
+const edit = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
 
-const head: Block = { registry_id: "blockr.core-head_block", state: {}, name: "Head", locked: null };
+const head: Block = { registry_id: id("blockr.core", "head_block"), state: {}, name: "Head", locked: null };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -38,11 +40,11 @@ function folder(index: string, parent: FolderId | null = null): Folder {
 }
 
 function boardWith(state: DockState): Board {
-  return { id: "board", name: "Board", blocks: {}, links: {}, stacks: {}, options: {}, plugins: { [DOCK]: state } };
+  return { id: "board", name: "Board", blocks: {}, links: {}, stacks: {}, options: {}, plugins: { [DOCK.package]: { [DOCK.id]: state } } };
 }
 
 function at(...segments: string[]): string {
-  return pointer(["plugins", DOCK, ...segments]);
+  return pointer(["plugins", DOCK.package, DOCK.id, ...segments]);
 }
 
 // The state after a delta and the patches that the `update` returned for it.
@@ -231,8 +233,15 @@ describe("the update, for a delta that it cannot read", () => {
     expect(update(delta, boardWith(state), DOCK)).toEqual([]);
   });
 
-  test("reads past the patches of other plugins", () => {
-    const delta: Delta = { blocks: { rm: ["c"] }, patches: [{ op: "replace", path: "/plugins/blockr.core-edit_board_plugin", value: {} }] };
+  test("reads past the patches of other plugins, of another class of the dock's package and of a class of the dock's id in another package too", () => {
+    const delta: Delta = {
+      blocks: { rm: ["c"] },
+      patches: [
+        { op: "replace", path: "/plugins/blockr.core/edit_board_plugin", value: {} },
+        { op: "replace", path: "/plugins/blockr.dock/other_plugin", value: {} },
+        { op: "replace", path: "/plugins/blockr.test/dock_plugin", value: {} },
+      ],
+    };
     expect(updated(delta, boardWith(state)).map(({ path }) => path)).toEqual([
       at("views", "v1", "grid"),
       at("views", "v3", "grid"),

@@ -14,8 +14,9 @@
 //   control's id.
 // - A link, with its label and the URL that it opens in a new tab.
 // - A menu, with its label and the links and further menus that it holds.
-// - A module item, with the id of a module that a package offers, which draws
-//   the item.
+// - A module item, with the package and the id of a module that a package
+//   offers, which draws the item, as
+//   { "package": "blockr.test", "id": "deck_button" }.
 // The dock reads them as R wrote them.
 // An item that it cannot read fails the frontend's render(), with a message
 // that names the item, as a blockr option that the dock cannot read does
@@ -24,7 +25,8 @@
 // default_navbar() gives it.
 
 import type { Json } from "@blockr/core";
-import { isObject } from "../../state/index.ts";
+import { isIdRecord, isObject } from "../../state/index.ts";
+import type { IdRecord } from "../../state/index.ts";
 
 // The dock's own parts of the bar, by id, in the order of the default bar.
 export const PARTS = ["logo", "name", "storage", "undo_redo", "spacer", "views", "read_only", "options"] as const;
@@ -58,7 +60,9 @@ export interface MenuItem {
 export interface ModuleItem {
   readonly kind: "module";
   readonly id: string;
-  readonly module: string;
+  // The module as JSON holds its id, which the bar makes an Id of with
+  // core.id() as it loads the module (./navbar.tsx).
+  readonly module: IdRecord;
 }
 
 export type NavbarItem = PartItem | StorageItem | LinkItem | MenuItem | ModuleItem;
@@ -96,7 +100,6 @@ function readList<T extends { readonly id: string }>(list: readonly Json[], read
 
 function readItem(sent: Json): NavbarItem {
   const { kind, id } = common(sent);
-  const field = (name: string) => text(sent, id, name);
   switch (kind) {
     case "part":
       if (!isPart(id)) {
@@ -106,7 +109,7 @@ function readItem(sent: Json): NavbarItem {
     case "storage":
       return { kind, id };
     case "module":
-      return { kind, id, module: field("module") };
+      return { kind, id, module: moduleOf(sent, id) };
     case "link":
     case "menu":
       return readEntry(sent);
@@ -145,6 +148,18 @@ function text(sent: Json, id: string, name: string): string {
     throw new TypeError(`The ${name} of the navbar item ${JSON.stringify(id)} is ${JSON.stringify(value)}, where the dock takes a non-empty string.`);
   }
   return value;
+}
+
+// The module of a module item, the package that offers it and its id within
+// the package, each a non-empty string.
+function moduleOf(sent: Json, id: string): IdRecord {
+  const value = isObject(sent) ? sent.module : undefined;
+  if (!isIdRecord(value) || value.package === "" || value.id === "") {
+    throw new TypeError(
+      `The module of the navbar item ${JSON.stringify(id)} is ${JSON.stringify(value)}, where the dock takes the package and the id of a module, as { "package": "blockr.test", "id": "deck_button" }.`,
+    );
+  }
+  return { package: value.package, id: value.id };
 }
 
 function isPart(id: string): id is PartId {

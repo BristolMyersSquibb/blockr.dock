@@ -3,7 +3,7 @@
 // a view's grid, for the order of the navigation and for the kind of a value
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.1).
 
-export type { DockState, Folder, FolderId, Grid, Node, Panel, Rail, Section, Split, TabGroup, View, ViewId } from "./types.ts";
+export type { DockState, Folder, FolderId, Grid, IdRecord, Node, Panel, Rail, Section, Split, TabGroup, View, ViewId } from "./types.ts";
 export { defaultState, isDockState } from "./state.ts";
 export { rehoused, update } from "./update.ts";
 export {
@@ -36,3 +36,4 @@ export { compare, firstView, foldersHolding, inFolder, mintKey, sameEntry, sitsA
 export type { Entry } from "./navigation.ts";
 export { patched, pointer } from "./patch.ts";
 export { isObject, sameJson } from "./json.ts";
+export { idText, isIdRecord, sameId } from "./ids.ts";

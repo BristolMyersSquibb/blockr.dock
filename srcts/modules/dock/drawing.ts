@@ -58,13 +58,14 @@
 //   that dockview, which follows the same element, has laid the dock out
 //   first.
 
-import type { CoreApi, PluginClassId } from "@blockr/core";
+import type { Board, CoreApi, PluginClassId } from "@blockr/core";
 import type { DockviewApi, DockviewIDisposable } from "dockview-react";
 import { dockState } from "../../commands/index.ts";
 import { columnRuns, gestureRuns, gridToLayout, layoutToGrid, panelFromId, panelId, railId, stackGrid } from "../../layout/index.ts";
 import type { Run, Size } from "../../layout/index.ts";
 import { EDGES, gridChanges, samePanel, tabGroups, withStoredShares } from "../../state/index.ts";
 import type { Edge, Grid, Panel, ViewId } from "../../state/index.ts";
+import { panelClass } from "./context.ts";
 import type { Narrow } from "./narrow.ts";
 import type { Settings } from "./settings.ts";
 
@@ -135,7 +136,7 @@ export function drawDock(options: DrawingOptions): () => void {
 
   // The title of a panel's tab, or undefined where the dock cannot draw it.
   const title = (panel: Panel): string | undefined =>
-    "block" in panel ? core.store.board().blocks[panel.block]?.name : drawn.get(panel.plugin);
+    "block" in panel ? core.store.board().blocks[panel.block]?.name : drawn.get(panelClass(core, panel));
 
   const size = (): Size => ({ width: api.width, height: api.height });
   const read = (): Grid => layoutToGrid(api.toJSON());
@@ -242,10 +243,12 @@ export function drawDock(options: DrawingOptions): () => void {
     for (const run of runs) send(run);
   }
 
+  // Sends a run of one of the dock's commands, whose Id it makes of the id that
+  // the run gives.
   function send(run: Run): void {
     pending += 1;
     void core.commands
-      .run(run.id, run.args)
+      .run(core.id("blockr.dock", run.id), run.args)
       .catch(() => {
         // Core tells the user why the board refused the command.
       })
@@ -412,13 +415,14 @@ export function drawDock(options: DrawingOptions): () => void {
   doc.addEventListener("keydown", onKey);
   // A change that leaves the dock's state as it was, as a block's state that
   // the user edits, can change a tab's name alone.
-  let lastState = core.store.board().plugins[plugin];
+  const stateOf = (board: Board) => board.plugins[plugin.package]?.[plugin.id];
+  let lastState = stateOf(core.store.board());
   const offBoard = core.store.subscribe((_change, board) => {
-    if (board.plugins[plugin] === lastState) {
+    if (stateOf(board) === lastState) {
       retitle();
       return;
     }
-    lastState = board.plugins[plugin];
+    lastState = stateOf(board);
     reconcile();
   });
   const offNarrow = narrow.subscribe(() => {

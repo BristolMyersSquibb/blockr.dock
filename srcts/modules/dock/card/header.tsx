@@ -2,25 +2,26 @@
 // header" has it
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.7#the-header):
 // 1. The block's mark, whose tooltip is the name of the block's class, with
-//    the package of its registry id as a badge.
+//    the package of its registry id as a badge, or the class's id where the
+//    block registry lacks the class.
 //    The status dot sits on the mark's upper right corner, filled or a ring as
 //    ./status-dot.ts gives it, with the status that it reads as its tooltip.
 // 2. The block's name, which wraps to a second line and is cut after it.
 //    A double-click on it, or Rename in the menu, turns it into a field that
 //    holds the name, selected.
-//    Enter or a click elsewhere runs blockr.core-change_block with the new
+//    Enter or a click elsewhere runs core's command change_block with the new
 //    name, Escape keeps the name, and an empty name, or one of spaces alone,
 //    is refused on Enter and dropped on a click elsewhere.
 // 3. The Controls toggle, once the block's UI has drawn anything, the
 //    Preview toggle and the padlock, each a bare 24px tool with its name as
 //    its tooltip and label.
-//    A toggle runs blockr.dock-set_sections with the block's new set of
+//    A toggle runs the dock's command set_sections with the block's new set of
 //    sections, and is pressed while its section shows.
 //    The padlock shows whether the board lock leaves the block open to
 //    readers, from the block's `locked`, closed for true or null and open for
 //    false, and is pressed while the block is open.
 //    A click on a closed padlock sets the block's `locked` to false through
-//    blockr.core-change_block, and one on an open padlock sets it to null.
+//    change_block, and one on an open padlock sets it to null.
 // 4. The "…" button, which opens the block's menu on a press, or on ArrowDown
 //    while it has the keyboard's focus.
 //    The button and the menu are blockr.ui's, its MenuTrigger, Button, Menu,
@@ -63,7 +64,7 @@ import { Picker } from "../picker.tsx";
 import { classGroups } from "./classes.tsx";
 import { copyText } from "./clipboard.ts";
 import { BinIcon, DotsIcon, EyeIcon, LockIcon, SlidersIcon } from "./icons.tsx";
-import { Mark, packageOf } from "./mark.tsx";
+import { Mark } from "./mark.tsx";
 import type { StatusDot } from "./status-dot.ts";
 import { useTooltip } from "./tooltip.tsx";
 
@@ -97,7 +98,7 @@ export function Header({
 
   const toggle = (section: Section) => {
     const shown = sections.includes(section) ? sections.filter((each) => each !== section) : [...sections, section];
-    runEdit(core, "blockr.dock-set_sections", {
+    runEdit(core, core.id("blockr.dock", "set_sections"), {
       block: id,
       sections: SECTIONS.filter((each) => shown.includes(each)),
     });
@@ -114,7 +115,7 @@ export function Header({
           <NameField
             name={block.name}
             onCommit={(name) => {
-              runEdit(core, "blockr.core-change_block", { id, name });
+              runEdit(core, core.id("blockr.core", "change_block"), { id, name });
             }}
             onDone={(restore) => {
               setRenaming(false);
@@ -152,7 +153,7 @@ export function Header({
               label={open ? "Open to readers" : "Locked for readers"}
               pressed={open}
               onClick={() => {
-                runEdit(core, "blockr.core-change_block", { id, locked: open ? null : false });
+                runEdit(core, core.id("blockr.core", "change_block"), { id, locked: open ? null : false });
               }}
             >
               <LockIcon open={open} />
@@ -174,8 +175,8 @@ function HeaderMark({
   block: Block;
   dot: StatusDot | null;
 }): ReactElement {
-  const pkg = packageOf(block.registry_id);
-  const name = entry?.name ?? block.registry_id;
+  const pkg = block.registry_id.package;
+  const name = entry?.name ?? block.registry_id.id;
   const { props, tooltip } = useTooltip([pkg === null ? { text: name } : { text: name, badge: pkg }]);
   return (
     <span className="blockr-card-mark-frame">
@@ -357,8 +358,10 @@ function MenuButton({
   };
 
   // Appends a block of the class to this block in one step, with a batch of
-  // two commands: blockr.core-add_block adds the block, and
-  // blockr.core-add_link links this block to it.
+  // two of core's commands: add_block adds the block, and add_link links this
+  // block to it.
+  // The args of add_block name the class by its package and its id, as JSON
+  // holds a registry id.
   // A batch hands no value from one command to the next, so the menu mints the
   // new block's id first, for the link to name.
   // The link lands on the class's first input where the class has several, of
@@ -370,8 +373,8 @@ function MenuButton({
     const { blocks } = core.store.board();
     const added = core.mintId((candidate) => Object.hasOwn(blocks, candidate));
     runEdit(core, [
-      { id: "blockr.core-add_block", args: { registry_id: entry.id, id: added } },
-      { id: "blockr.core-add_link", args: { from: id, to: added, ...input } },
+      { id: core.id("blockr.core", "add_block"), args: { registry_id: { package: entry.package, id: entry.id }, id: added } },
+      { id: core.id("blockr.core", "add_link"), args: { from: id, to: added, ...input } },
     ]);
   };
 
@@ -411,7 +414,7 @@ function MenuButton({
             textValue="Remove block"
             className="blockr-card-menu-danger"
             onAction={() => {
-              runEdit(core, "blockr.core-remove_block", { id });
+              runEdit(core, core.id("blockr.core", "remove_block"), { id });
             }}
           >
             <Text slot="label" className="blockr-card-menu-lead">
@@ -454,7 +457,7 @@ function MenuButton({
           caption={`Append to ${block.name}`}
           search={{ label: "Search blocks", empty: "No matches" }}
           groups={classGroups(
-            Object.values(core.blockRegistry()).filter((entry) => entry.inputs.length > 0),
+            [...core.blockRegistry().values()].filter((entry) => entry.inputs.length > 0),
             append,
           )}
           onClose={() => {

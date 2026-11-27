@@ -6,10 +6,12 @@
 // in a portal of the dock's React tree, so they read the context of the dock's
 // root as well.
 // The module also holds how the dock runs one of its commands, or a batch of
-// them, as an edit, and how it gives a block focus.
+// them, as an edit, how it gives a block focus, and how it makes the id of the
+// plugin whose panel its state names.
 
-import type { BlockId, CoreApi, Json, PluginClassId } from "@blockr/core";
+import type { BlockId, CommandCall, CommandId, CoreApi, Json, PluginClassId } from "@blockr/core";
 import { createContext, useContext } from "react";
+import type { IdRecord } from "../../state/index.ts";
 
 export interface DockContextValue {
   readonly core: CoreApi;
@@ -42,20 +44,33 @@ export function useDock(): DockContextValue {
   return value;
 }
 
-// Commands of the board, each with its args, which run in order as one step.
-export type Batch = readonly { readonly id: string; readonly args?: Json }[];
+// Commands of the board, each by its id, as core.id() makes it, with its
+// args, which run in order as one step.
+export type Batch = readonly CommandCall[];
 
 // Runs one of the board's commands as an edit of the dock, or the commands of
 // a batch.
 // Where the board refuses the edit, core tells the user why, as an error of
 // the code board_edit_failed.
-export function runEdit(core: CoreApi, id: string, args: Json): void;
+export function runEdit(core: CoreApi, id: CommandId, args: Json): void;
 export function runEdit(core: CoreApi, batch: Batch): void;
-export function runEdit(core: CoreApi, edit: string | Batch, args?: Json): void {
-  const running = typeof edit === "string" ? core.commands.run(edit, args) : core.commands.run(edit);
+export function runEdit(core: CoreApi, edit: CommandId | Batch, args?: Json): void {
+  const running = isBatch(edit) ? core.commands.run(edit) : core.commands.run(edit, args);
   running.catch(() => {
     // Core tells the user why the board refused the edit.
   });
+}
+
+function isBatch(edit: CommandId | Batch): edit is Batch {
+  return Array.isArray(edit);
+}
+
+// The id of the class of the plugin whose panel the dock's state names, as
+// core makes it of the record that the state holds.
+// So === finds it among the ids that core gives, as `drawn` holds them, and
+// core finds the plugin by it.
+export function panelClass(core: Pick<CoreApi, "id">, panel: { readonly plugin: IdRecord }): PluginClassId {
+  return core.id(panel.plugin.package, panel.plugin.id);
 }
 
 // Gives a block focus in CoreApi.focus, unless it has it.

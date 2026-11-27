@@ -18,6 +18,7 @@
 // The top split may be empty: that is the grid of a view that shows nothing.
 
 import type { Json } from "@blockr/core";
+import { idText, sameId } from "./ids.ts";
 import type { Grid, Node, Panel, Rail, Split, TabGroup } from "./types.ts";
 
 // The edges that a view has a rail on, in reading order.
@@ -44,9 +45,10 @@ export function isTabGroup(node: Node): node is TabGroup {
   return "panels" in node;
 }
 
-// Whether two values name the same panel.
+// Whether two values name the same panel, a plugin's by the package and the
+// id of its class.
 export function samePanel(a: Panel, b: Panel): boolean {
-  return "block" in a ? "block" in b && a.block === b.block : "plugin" in b && a.plugin === b.plugin;
+  return "block" in a ? "block" in b && a.block === b.block : "plugin" in b && sameId(a.plugin, b.plugin);
 }
 
 // The panels that a grid places, in reading order: its tab groups, depth
@@ -214,9 +216,10 @@ function count(n: number, one: string, many: string): string {
   return `${String(n)} ${n === 1 ? one : many}`;
 }
 
-// How a sentence names a panel.
+// How a sentence names a panel, a plugin's by its class, as core's messages
+// name an id.
 export function panelName(panel: Panel): string {
-  return "block" in panel ? `the panel of the block "${panel.block}"` : `the panel of the plugin "${panel.plugin}"`;
+  return "block" in panel ? `the panel of the block "${panel.block}"` : `the panel of the plugin "${idText(panel.plugin)}"`;
 }
 
 // The grid with a panel at its default place.
@@ -564,10 +567,19 @@ export function gridChanges(stored: Grid, grid: Grid): GridChanges {
 
 // The arrangement of a grid, as gridChanges() compares it: its orientation,
 // its splits and tab groups with their panels, and its rails with theirs.
+// It writes each panel as namedPanel() does, so that two values that name the
+// same panel give the same text.
 function arrangement(grid: Grid): Json {
-  const node = (child: Node): Json => (isTabGroup(child) ? child.panels : child.children.map(node));
-  const edges = rails(grid).map(([edge, rail]): [Edge, Json] => [edge, rail.panels]);
+  const panels = (list: readonly Panel[]): Json => list.map(namedPanel);
+  const node = (child: Node): Json => (isTabGroup(child) ? panels(child.panels) : child.children.map(node));
+  const edges = rails(grid).map(([edge, rail]): [Edge, Json] => [edge, panels(rail.panels)]);
   return { orientation: grid.orientation, children: grid.children.map(node), rails: Object.fromEntries(edges) };
+}
+
+// A panel with only what names it: the block's id, or the package and then the
+// id of the plugin's class, since JSON may hold the two in either order.
+function namedPanel(panel: Panel): Panel {
+  return "block" in panel ? { block: panel.block } : { plugin: { package: panel.plugin.package, id: panel.plugin.id } };
 }
 
 // The shape of a grid's splits: its orientation, and its splits and tab

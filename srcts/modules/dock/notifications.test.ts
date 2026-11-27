@@ -1,11 +1,23 @@
 // Where the dock shows each notification of CoreApi, by what it concerns and
 // by the active view.
 
-import type { Board, BoardObject, Notification, NotificationSource } from "@blockr/core";
+import type { Board, BoardObject, Notification, NotificationSource, PluginClassId } from "@blockr/core";
+import { id } from "@blockr/core/stubs";
 import { describe, expect, test } from "vitest";
 import { DOCK } from "../../commands/index.ts";
-import type { DockState, Grid } from "../../state/index.ts";
+import type { DockState, Grid, Panel } from "../../state/index.ts";
 import { asToast, inActiveView, onCard, panelPlugin, tabNotifications } from "./notifications.ts";
+
+// Core's Edit board plugin, whose panel the dock draws, and the storage
+// plugin, which has no `ui`, so that the dock draws no panel for it, by the
+// ids of their classes as core gives them.
+const EDIT = id("blockr.core", "edit_board_plugin");
+const STORAGE = id("blockr.core", "file_storage_plugin");
+const drawn: ReadonlyMap<PluginClassId, string> = new Map([[EDIT, "Edit board"]]);
+
+// The Edit board plugin's panel as the dock's state names it, by a record of
+// the package and the id of its class, which is no object of core's.
+const EDIT_PANEL: Panel = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
 
 // A notification from the source given, about the board object given, or
 // about the board.
@@ -22,34 +34,28 @@ const sources = {
     kind: "r",
     class: ["simpleError", "error", "condition"],
     request: { type: "plugin", name: "layout" },
-    module: { object: { plugin: "blockr.core-edit_board_plugin" }, package: "blockr.core" },
+    module: { object: { plugin: EDIT }, package: "blockr.core" },
   },
   core: { kind: "core", code: "module_failed", module: { object: { block: "a" }, package: "blockr.core" } },
   renderer: {
     kind: "module",
-    module: { object: { block: "a" }, renderer: "blockr.core-basic_table", package: "blockr.core" },
+    module: { object: { block: "a" }, renderer: id("blockr.core", "basic_table"), package: "blockr.core" },
     code: "render_failed",
   },
   option: { kind: "module", module: { object: { option: "n_rows" }, package: "blockr.core" }, code: "rows_capped" },
-  plugin: { kind: "module", module: { object: { plugin: "blockr.core-edit_board_plugin" }, package: "blockr.core" }, code: "link_refused" },
+  plugin: { kind: "module", module: { object: { plugin: EDIT }, package: "blockr.core" }, code: "link_refused" },
 } satisfies Record<string, NotificationSource>;
-
-// Core's Edit board plugin, whose panel the dock draws, and the storage
-// plugin, which has no `ui`, so that the dock draws no panel for it.
-const EDIT = "blockr.core-edit_board_plugin";
-const STORAGE = "blockr.core-file_storage_plugin";
-const drawn = new Map([[EDIT, "Edit board"]]);
 
 // A grid of one tab group that shows a's panel, with the Edit board plugin's
 // panel beside it where `edit` says where: in the tab group, behind a's
 // panel, or on a collapsed rail.
 function gridWith(edit?: "group" | "rail"): Grid {
-  const panels = edit === "group" ? [{ block: "a" }, { plugin: EDIT }] : [{ block: "a" }];
+  const panels: Panel[] = edit === "group" ? [{ block: "a" }, EDIT_PANEL] : [{ block: "a" }];
   return {
     orientation: "horizontal",
     children: [{ panels, active: { block: "a" } }],
     sizes: [1],
-    ...(edit === "rail" ? { rails: { left: { panels: [{ plugin: EDIT }], active: { plugin: EDIT }, collapsed: true, size: 260 } } } : {}),
+    ...(edit === "rail" ? { rails: { left: { panels: [EDIT_PANEL], active: EDIT_PANEL, collapsed: true, size: 260 } } } : {}),
   };
 }
 
@@ -65,7 +71,7 @@ function boardWith(main: Grid, side: Grid, active: "main" | "side" | null = "mai
     active,
     visible: {},
   };
-  return { id: "board", name: "Board", blocks: {}, links: {}, stacks: {}, options: {}, plugins: { [DOCK]: state } };
+  return { id: "board", name: "Board", blocks: {}, links: {}, stacks: {}, options: {}, plugins: { [DOCK.package]: { [DOCK.id]: state } } };
 }
 
 describe("where the dock shows a notification", () => {

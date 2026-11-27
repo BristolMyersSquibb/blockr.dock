@@ -4,7 +4,7 @@
 #' Its client draws the page as a React app, with dockview for the layout.
 #' The constructor `new_dock_plugin()` makes the dock plugin, of class
 #' `c("dock_plugin", "frontend_plugin", "plugin")`, whose plugin class has the
-#' id `blockr.dock-dock_plugin` (see [blockr.core::new_plugin()]).
+#' id `dock_plugin` within blockr.dock (see [blockr.core::new_plugin()]).
 #' The dock keeps its state in the board: its views, the folders that group
 #' them, the active view and the sections that each block's card shows.
 #' The schema of that state ships beside the class's module, as
@@ -37,8 +37,8 @@
 #' The client then gives the board the class's default, which holds no view,
 #' and the dock adds a view as it starts.
 #' In a grid, a bare id names a block, and [plg()] names a plugin by the
-#' name that the script gives it in the board's `plugins`, or by the id of its
-#' class.
+#' name that the script gives it in the board's `plugins`, or by its class's
+#' package and id.
 #'
 #' The constructor refuses, naming each, a grid that places a panel twice.
 #' A panel on a rail and in a tab group counts as twice.
@@ -92,7 +92,7 @@
 #'
 #' The package also offers blockr.assistant a module named `assistant`, in the
 #' `modules` of its `._BLOCKR_MODULES_`, so that the module's id is
-#' `blockr.dock-assistant`.
+#' `assistant` within blockr.dock.
 #' As each call of the assistant's model goes out, the module tells the model
 #' what the dock's state holds.
 #' It names the active view, and lists each view in the order of the views
@@ -152,6 +152,7 @@ plugin_options.dock_plugin <- function(x, ...) {
 
 # The print shows the views menu as a tree, in which a folder shows its name
 # and a view its id, and then each view in the menu's order, after its id.
+# Its first line names the plugin's class as core's messages name an id.
 # The menu orders the views and folders of each folder by their `index`, and
 # the method compares the keys by their bytes, as the client compares their
 # code units.
@@ -256,7 +257,7 @@ format.dock_plugin <- function(x, ...) {
 
   c(
     paste0(
-      "<", class(x)[1L], "> ", plugin_class_id(x),
+      "<", class(x)[1L], "> ", id_label(plugin_class_id(x)),
       if (length(visible)) {
         " (sections: i inputs, o outputs, n neither, unmarked both)"
       }
