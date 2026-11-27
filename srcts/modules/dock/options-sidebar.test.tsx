@@ -14,14 +14,15 @@ import { reactModule, useValue } from "@blockr/core/react";
 import type { ModuleProps } from "@blockr/core/react";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import { Button, ComboBox, ComboBoxItem, Menu, MenuItem, MenuTrigger } from "@blockr/ui";
-import { find, listFromField, menuItem, openMenu, optionFromLabel, type } from "@blockr/ui/stubs";
+import { find, listFromField, menuItem, openMenu, optionFromLabel } from "@blockr/ui/stubs";
+import { act } from "react";
 import type { ReactElement } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
-import { pressFocused } from "./testing.ts";
+import { click, drawn, pressFocused, typeInto, waitFor } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
@@ -299,16 +300,13 @@ function shadeField(el: HTMLElement): HTMLInputElement {
   return field;
 }
 
-// Clicks the element as a pointer does, which goes down on it first.
-function click(target: Element): void {
-  target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-  target.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
-}
 
 // Opens the sidebar from the options button, which has the focus first, as a
 // click on it gives it in a browser.
 async function open(el: HTMLElement): Promise<void> {
-  optionsButton(el).focus();
+  act(() => {
+    optionsButton(el).focus();
+  });
   click(optionsButton(el));
   await drawn();
 }
@@ -317,7 +315,7 @@ async function open(el: HTMLElement): Promise<void> {
 // the UIs of the board options given, of that category.
 async function expand(el: HTMLElement, name: string, ...options: readonly string[]): Promise<void> {
   click(summary(el, name));
-  await vi.waitFor(() => {
+  await waitFor(() => {
     for (const option of options) expect(fieldOf(el, option)).not.toBeNull();
   });
 }
@@ -370,7 +368,7 @@ describe("the options sidebar", () => {
     await open(el);
     expect(summary(el, "Extra options").textContent).toBe("Extra options1, 1 board option");
 
-    await core.commands.run("blockr.core-set_option", { id: "texture", value: 2 });
+    await act(() => core.commands.run("blockr.core-set_option", { id: "texture", value: 2 }));
     await drawn();
     expect(summary(el, "Extra options").textContent).toBe("Extra options2, 2 board options");
   });
@@ -379,7 +377,7 @@ describe("the options sidebar", () => {
     const { el, core } = await startSidebar({ options: { compact: { value: true, version: 1 } } });
     await open(el);
     await expand(el, "Theme options", "compact", "view_tabs");
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(resetOf(el, "compact")).not.toBeNull();
     });
     // The board holds the default of view_tabs.
@@ -388,9 +386,11 @@ describe("the options sidebar", () => {
     const reset = button(category(el, "Theme options"), "Reset Compact to its default");
     expect(reset.hasAttribute("data-rac")).toBe(true);
     expect(reset.title).toBe("Reset to the default");
-    reset.focus();
+    act(() => {
+      reset.focus();
+    });
     click(reset);
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(core.store.board().options.compact).toBe(false);
     });
     await drawn();
@@ -409,14 +409,14 @@ describe("the options sidebar", () => {
     await expand(el, "Theme options", "compact");
     expect(toggle.textContent).toBe("Expand all");
     click(toggle);
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(expanded(el)).toEqual(names(el));
     });
     expect(toggle.textContent).toBe("Collapse all");
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
 
     click(toggle);
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(expanded(el)).toEqual([]);
     });
     expect(toggle.textContent).toBe("Expand all");
@@ -432,8 +432,8 @@ describe("the options sidebar", () => {
     expect(optionsIn(el, "Extra options")).toEqual(["grain", "texture"]);
     expect(mounts.started).toEqual(["grain", "texture"]);
 
-    type(inputOf(el, "texture"), "3");
-    await vi.waitFor(() => {
+    typeInto(inputOf(el, "texture"), "3");
+    await waitFor(() => {
       expect(core.store.board().options.texture).toBe(3);
     });
   });
@@ -448,7 +448,7 @@ describe("the options sidebar", () => {
     expect(expanded(el)).toEqual(["Extra options", "View options"]);
 
     click(summary(el, "Extra options"));
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(mounts.ended).toEqual(["grain", "texture"]);
     });
     expect(expanded(el)).toEqual(["View options"]);
@@ -469,11 +469,11 @@ describe("the options sidebar", () => {
     await expand(el, "Extra options", "texture");
 
     click(summary(el, "Extra options"));
-    await new Promise((resolve) => setTimeout(resolve, 40));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 40)));
     expect(expanded(el)).toEqual([]);
     expect(optionsIn(el, "Extra options")).toEqual(["texture"]);
     expect(mounts.ended).toEqual([]);
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(mounts.ended).toEqual(["texture"]);
     });
     expect(optionsIn(el, "Extra options")).toEqual([]);
@@ -514,7 +514,9 @@ describe("the options sidebar", () => {
     expect(document.activeElement).toBe(optionsButton(el));
 
     await open(el);
-    find(el, ".blockr-dock").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    act(() => {
+      find(el, ".blockr-dock").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
     await drawn();
     expect(isOpen(el)).toBe(false);
   });
@@ -526,15 +528,17 @@ describe("the options sidebar", () => {
     const field = fieldOf(el, "zoom");
     if (!(field instanceof HTMLInputElement)) throw new Error("No field.");
 
-    field.focus();
+    act(() => {
+      field.focus();
+    });
     field.value = "7";
     expect(pressFocused("Escape")).toBe(true);
     await drawn();
     expect(field.value).toBe("2");
     expect(isOpen(el)).toBe(true);
 
-    type(field, "3");
-    await vi.waitFor(() => {
+    typeInto(field, "3");
+    await waitFor(() => {
       expect(core.store.board().options.zoom).toBe(3);
     });
     pressFocused("Escape");
@@ -548,26 +552,36 @@ describe("the options sidebar", () => {
     await expand(el, "Overlay options", "shade");
     const field = shadeField(el);
 
-    field.click();
+    act(() => {
+      field.click();
+    });
     await drawn();
     const list = listFromField(field);
     if (list === null) throw new Error("The select's list did not open.");
     expect(sidebarIn(el).contains(list)).toBe(false);
     const deep = optionFromLabel(field, "Deep");
-    deep.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-    deep.click();
-    await vi.waitFor(() => {
+    act(() => {
+      deep.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    act(() => {
+      deep.click();
+    });
+    await waitFor(() => {
       expect(core.store.board().options.shade).toBe("deep");
     });
     expect(isOpen(el)).toBe(true);
 
     // A press outside the sidebar and outside its overlays closes it, as it
     // closes the list.
-    field.focus();
+    act(() => {
+      field.focus();
+    });
     pressFocused("ArrowDown");
     await drawn();
     expect(listFromField(field)).not.toBeNull();
-    find(el, ".blockr-dock").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    act(() => {
+      find(el, ".blockr-dock").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
     await drawn();
     expect(isOpen(el)).toBe(false);
   });
@@ -578,7 +592,9 @@ describe("the options sidebar", () => {
     await expand(el, "Overlay options", "shade");
     const field = shadeField(el);
 
-    field.focus();
+    act(() => {
+      field.focus();
+    });
     pressFocused("ArrowDown");
     await drawn();
     expect(listFromField(field)).not.toBeNull();
@@ -596,21 +612,29 @@ describe("the options sidebar", () => {
     const { el, core } = await startSidebar({ overlays: true });
     await open(el);
     click(summary(el, "Overlay options"));
-    const trigger = await vi.waitFor(() => button(sidebarIn(el), "Layout"));
+    const trigger = await waitFor(() => button(sidebarIn(el), "Layout"));
 
-    trigger.click();
+    act(() => {
+      trigger.click();
+    });
     await drawn();
     const menu = openMenu("Layouts");
     expect(sidebarIn(el).contains(menu)).toBe(false);
     const underlay = find(document, '[data-testid="underlay"]');
     expect(el.contains(underlay)).toBe(false);
-    underlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-    underlay.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+    act(() => {
+      underlay.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    act(() => {
+      underlay.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+    });
     await drawn();
     expect(() => openMenu("Layouts")).toThrow();
     expect(isOpen(el)).toBe(true);
 
-    trigger.click();
+    act(() => {
+      trigger.click();
+    });
     await drawn();
     openMenu("Layouts");
     pressFocused("Escape");
@@ -618,12 +642,18 @@ describe("the options sidebar", () => {
     expect(() => openMenu("Layouts")).toThrow();
     expect(isOpen(el)).toBe(true);
 
-    trigger.click();
+    act(() => {
+      trigger.click();
+    });
     await drawn();
     const item = menuItem(openMenu("Layouts"), "List");
-    item.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-    item.click();
-    await vi.waitFor(() => {
+    act(() => {
+      item.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
+    act(() => {
+      item.click();
+    });
+    await waitFor(() => {
       expect(core.store.board().options.layout).toBe("list");
     });
     expect(isOpen(el)).toBe(true);
@@ -632,17 +662,25 @@ describe("the options sidebar", () => {
   test("stays open on a press on the options button, which toggles it, and on a toast, which lies over it", async () => {
     const { el, core } = await startSidebar();
     await open(el);
-    optionsButton(el).dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    act(() => {
+      optionsButton(el).dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
     await drawn();
     expect(isOpen(el)).toBe(true);
-    optionsButton(el).dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+    act(() => {
+      optionsButton(el).dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+    });
     await drawn();
     expect(isOpen(el)).toBe(false);
 
     await open(el);
-    core.notifications.notify(VIEWER, { severity: "message", code: "zoomed", message: "Zoomed in." });
+    act(() => {
+      core.notifications.notify(VIEWER, { severity: "message", code: "zoomed", message: "Zoomed in." });
+    });
     await drawn();
-    find(el, ".blockr-dock-toasts [data-severity]").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    act(() => {
+      find(el, ".blockr-dock-toasts [data-severity]").dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
     await drawn();
     expect(isOpen(el)).toBe(true);
   });
@@ -661,9 +699,13 @@ describe("the options sidebar", () => {
     expect(bar.hasAttribute("data-pushed")).toBe(true);
     expect(root.hasAttribute("data-pushed")).toBe(true);
 
-    summary(el, "Board options").focus();
+    act(() => {
+      summary(el, "Board options").focus();
+    });
     expect(pressFocused("Escape")).toBe(false);
-    root.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    act(() => {
+      root.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    });
     await drawn();
     expect(isOpen(el)).toBe(true);
 
@@ -681,7 +723,9 @@ describe("the options sidebar", () => {
     const last = summaries(el).at(-1);
     if (last === undefined) throw new Error("The sidebar lists no category.");
 
-    last.focus();
+    act(() => {
+      last.focus();
+    });
     expect(pressFocused("Tab")).toBe(true);
     expect(document.activeElement).toBe(first);
     expect(pressFocused("Tab", { shiftKey: true })).toBe(true);
@@ -689,9 +733,13 @@ describe("the options sidebar", () => {
 
     click(button(sidebarIn(el), "Pin sidebar"));
     await drawn();
-    summary(el, "Board options").focus();
+    act(() => {
+      summary(el, "Board options").focus();
+    });
     expect(pressFocused("Tab")).toBe(false);
-    first.focus();
+    act(() => {
+      first.focus();
+    });
     expect(pressFocused("Tab", { shiftKey: true })).toBe(true);
     expect(document.activeElement).toBe(last);
   });
@@ -702,7 +750,7 @@ describe("the options sidebar", () => {
     // Nothing puts grain on the board.
     expect(ownNames(el)).toEqual(["Board options", "Theme options", "View options"]);
 
-    await core.commands.run("blockr.core-set_option", { id: "grain", value: 5 });
+    await act(() => core.commands.run("blockr.core-set_option", { id: "grain", value: 5 }));
     await drawn();
     expect(ownNames(el)).toEqual(["Board options", "Extra options", "Theme options", "View options"]);
   });
@@ -712,8 +760,10 @@ describe("the options sidebar", () => {
     await open(el);
     await expand(el, "Extra options", "grain");
 
-    core.store.apply({ options: { unset: ["grain"] } });
-    await vi.waitFor(() => {
+    act(() => {
+      core.store.apply({ options: { unset: ["grain"] } });
+    });
+    await waitFor(() => {
       expect(names(el)).not.toContain("Extra options");
     });
     expect(core.store.board().options.grain).toBeUndefined();
@@ -725,14 +775,10 @@ describe("the options sidebar", () => {
     expect(ownNames(el)).toEqual(["Board options", "Theme options", "View options"]);
 
     await expand(el, "View options", "zoom");
-    type(inputOf(el, "zoom"), "4");
-    await vi.waitFor(() => {
+    typeInto(inputOf(el, "zoom"), "4");
+    await waitFor(() => {
       expect(core.store.board().options.zoom).toBe(4);
     });
   });
 });
 
-// Waits for React to draw what an event changed.
-async function drawn(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-}

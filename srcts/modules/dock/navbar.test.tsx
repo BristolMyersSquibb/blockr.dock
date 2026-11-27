@@ -9,13 +9,13 @@
 
 import type { CoreApi, Json, LogLine, PluginClass, StorageControl } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
-import { type } from "@blockr/ui/stubs";
+import { act } from "react";
 import { beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
-import { pressOn } from "./testing.ts";
+import { click, drawn, pressOn, typeInto } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
@@ -173,7 +173,9 @@ function everyKind() {
   };
   const setSaved = (text: string) => {
     saved = text;
-    for (const fn of [...listeners]) fn();
+    act(() => {
+      for (const fn of [...listeners]) fn();
+    });
   };
   return { runs, storageClass, setSaved, listeners };
 }
@@ -306,11 +308,15 @@ describe("the storage plugin's controls on the bar", () => {
     // The row that a menu names as its active descendant.
     const active = (menu: Element | null) => document.getElementById(menu?.getAttribute("aria-activedescendant") ?? "")?.textContent;
     const keyOn = (target: Element | null, key: string) => {
-      target?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+      act(() => {
+        target?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+      });
     };
 
     const opener = button(storage, "Workflow one");
-    opener.focus();
+    act(() => {
+      opener.focus();
+    });
     keyOn(opener, "ArrowDown");
     await drawn();
     const menu = el.querySelector('[role="menu"][aria-label="Workflow one"]');
@@ -374,7 +380,9 @@ describe("the storage plugin's controls on the bar", () => {
 
     const field = document.createElement("input");
     el.append(field);
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true }));
+    act(() => {
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true }));
+    });
     expect(runs).toEqual(["save", "open-a"]);
   });
 
@@ -467,7 +475,9 @@ describe("the storage plugin's controls on the bar", () => {
     for (const control of [menu, avatar, saved]) {
       if (control === undefined || control === null) throw new Error("No control.");
       cutShort(control);
-      control.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+      act(() => {
+        control.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+      });
     }
     expect(menu.title).toBe("Workflow one");
     expect(avatar?.title).toBe("NJ");
@@ -561,8 +571,10 @@ describe("the dock's own parts", () => {
     const field = dockBar(el).querySelector<HTMLInputElement>("input.blockr-dock-bar-field");
     if (field === null) throw new Error("No field.");
     expect(document.activeElement).toBe(field);
-    type(field, "  Quarterly  ");
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    typeInto(field, "  Quarterly  ");
+    act(() => {
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
     await drawn();
 
     expect(core.store.board().name).toBe("Quarterly");
@@ -582,8 +594,10 @@ describe("the dock's own parts", () => {
       await drawn();
       const field = dockBar(el).querySelector<HTMLInputElement>("input.blockr-dock-bar-field");
       if (field === null) throw new Error("No field.");
-      type(field, text);
-      field.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      typeInto(field, text);
+      act(() => {
+        field.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
       await drawn();
     }
     expect(core.store.board().name).toBe(before);
@@ -606,7 +620,7 @@ describe("the dock's own parts", () => {
     expect(undo.getAttribute("aria-keyshortcuts")).toBe("Control+Z Meta+Z");
     expect(redo.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+Z Meta+Shift+Z Control+Y");
 
-    await core.commands.run("blockr.core-change_board", { name: "Renamed" });
+    await act(() => core.commands.run("blockr.core-change_board", { name: "Renamed" }));
     await drawn();
     expect(undo.disabled).toBe(false);
 
@@ -624,7 +638,9 @@ describe("the dock's own parts", () => {
 
     const field = document.createElement("input");
     el.append(field);
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true }));
+    act(() => {
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true }));
+    });
     expect(core.store.board().name).toBe("Renamed");
   });
 
@@ -673,11 +689,17 @@ describe("the dock's own parts", () => {
     const name = dockBar(el).querySelector<HTMLElement>("button.blockr-dock-bar-name");
     if (name === null) throw new Error("No name.");
 
-    name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    act(() => {
+      name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    });
     expect(name.title).toBe("Click to rename");
     cutShort(name);
-    name.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
-    name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    act(() => {
+      name.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
+    });
+    act(() => {
+      name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    });
     expect(name.title).toBe(`${core.store.board().name}\nClick to rename`);
   });
 });
@@ -694,12 +716,6 @@ beforeAll(() => {
   }
 });
 
-// Clicks the element as a pointer does, which goes down on it first.
-function click(target: Element | null | undefined): void {
-  if (target === null || target === undefined) throw new Error("Nothing to click.");
-  target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-  target.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
-}
 
 
 // Has the element's label measure wider than the room that it has, as where
@@ -715,7 +731,3 @@ function errors(logged: readonly LogLine[], pkg: string): string[] {
   return logged.filter((line) => line.level === "error" && line.package === pkg).map((line) => line.message);
 }
 
-// Waits for React to draw what an event changed.
-async function drawn(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-}

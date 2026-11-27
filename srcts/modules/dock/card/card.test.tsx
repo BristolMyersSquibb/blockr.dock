@@ -6,10 +6,10 @@
 import type { BlockId, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import type { StubCoreOptions } from "@blockr/core/stubs";
-import { type } from "@blockr/ui/stubs";
+import { act } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import type { DockState } from "../../../state/index.ts";
-import { DOCK, hello, modules, pressOn, typeSearch } from "../testing.ts";
+import { DOCK, hello, modules, pressOn, typeInto, typeSearch, waitFor } from "../testing.ts";
 import { matches } from "../picker.tsx";
 import { menuSpot, tooltipSpot } from "../place.ts";
 import { classGroups } from "./classes.tsx";
@@ -136,7 +136,7 @@ function rows(menu: HTMLElement): string[] {
 // Waits for the search of the "+" menu to take the focus, which React Aria
 // moves a frame after a click without a pointer, as click() makes.
 async function focusedSearch(menu: HTMLElement): Promise<HTMLInputElement> {
-  return await vi.waitFor(() => {
+  return await waitFor(() => {
     const search = menu.querySelector("input");
     if (search === null || document.activeElement !== search) throw new Error("The search of the + menu has not taken the focus.");
     return search;
@@ -184,21 +184,27 @@ function rowOf(menu: HTMLElement, label: string): HTMLElement {
 }
 
 const pointer = (target: Element, type: string) => {
-  target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: "mouse" }));
+  act(() => {
+    target.dispatchEvent(new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: "mouse" }));
+  });
 };
 
 // A pointer event of a mouse that has a size and a pressure, which React Aria
 // tells from the event that a screen reader makes.
 const mouse = (target: Element, type: string) => {
-  target.dispatchEvent(
-    new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: "mouse", pointerId: 1, width: 1, height: 1, pressure: 0.5, detail: 1 }),
-  );
+  act(() => {
+    target.dispatchEvent(
+      new PointerEvent(type, { bubbles: true, cancelable: true, pointerType: "mouse", pointerId: 1, width: 1, height: 1, pressure: 0.5, detail: 1 }),
+    );
+  });
 };
 
 // A click of the pointer, whose detail counts the clicks, while a click that
 // the keyboard makes, as click() does, has none.
 const clickOn = (target: Element) => {
-  target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
+  act(() => {
+    target.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, detail: 1 }));
+  });
 };
 
 const visibleOf = (core: { store: { board(): { plugins: Readonly<Record<string, unknown>> } } }) =>
@@ -226,7 +232,7 @@ describe("a block's card", () => {
     expect(ui?.textContent).toBe("The block's controls");
     expect(sectionOf(card, "outputs")?.querySelector('[role="region"][aria-label="Output"]')).not.toBeNull();
 
-    await core.commands.run("blockr.core-remove_block", { id: "b" });
+    await act(() => core.commands.run("blockr.core-remove_block", { id: "b" }));
     await settled();
     expect(el.querySelector('.blockr-card[aria-label="Head"]')).toBeNull();
     expect(ui?.childNodes).toHaveLength(0);
@@ -236,7 +242,7 @@ describe("a block's card", () => {
     const { core, el, settled } = await startCards();
 
     const ui = cardOf(el, "Head").querySelector('[aria-label="Inputs"]');
-    await core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "c" } });
+    await act(() => core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "c" } }));
     await settled();
     expect(cardOf(el, "Merge")).toBeDefined();
     expect(ui?.textContent).toBe("The block's controls");
@@ -269,19 +275,25 @@ describe("a block's card", () => {
     const { core, el, settled } = await startCards();
 
     const card = cardOf(el, "Head");
-    toolOf(card, "Preview").click();
+    act(() => {
+      toolOf(card, "Preview").click();
+    });
     await settled();
     expect(visibleOf(core)).toEqual({ b: ["inputs"] });
     expect(sectionOf(card, "outputs")?.hidden).toBe(true);
     expect(sectionOf(card, "inputs")?.getAttribute("data-open")).toBe("true");
     expect(toolOf(card, "Preview").getAttribute("aria-pressed")).toBe("false");
 
-    toolOf(card, "Controls").click();
+    act(() => {
+      toolOf(card, "Controls").click();
+    });
     await settled();
     expect(visibleOf(core)).toEqual({ b: [] });
     expect(sectionOf(card, "inputs")?.hidden).toBe(true);
 
-    core.store.undo();
+    act(() => {
+      core.store.undo();
+    });
     await settled();
     expect(visibleOf(core)).toEqual({ b: ["inputs"] });
     expect(sectionOf(card, "inputs")?.hidden).toBe(false);
@@ -299,14 +311,18 @@ describe("a block's card", () => {
     const transition = (finished: Promise<undefined>) => ({ transitionProperty: "grid-template-rows", finished }) as unknown as Animation;
     const animations = vi.spyOn(outputs, "getAnimations").mockReturnValue([transition(closing.promise)]);
 
-    toolOf(card, "Preview").click();
+    act(() => {
+      toolOf(card, "Preview").click();
+    });
     await settled();
     expect(outputs.getAttribute("data-open")).toBe("false");
     expect(outputs.hasAttribute("data-folding")).toBe(true);
     expect(outputs.hidden).toBe(false);
 
     animations.mockReturnValue([transition(opening.promise)]);
-    toolOf(card, "Preview").click();
+    act(() => {
+      toolOf(card, "Preview").click();
+    });
     await settled();
     closing.resolve(undefined);
     await settled();
@@ -319,7 +335,9 @@ describe("a block's card", () => {
     expect(outputs.hidden).toBe(false);
 
     animations.mockReturnValue([]);
-    toolOf(card, "Preview").click();
+    act(() => {
+      toolOf(card, "Preview").click();
+    });
     await settled();
     expect(outputs.hidden).toBe(true);
     expect(outputs.hasAttribute("data-folding")).toBe(false);
@@ -330,12 +348,16 @@ describe("a block's card", () => {
 
     const card = cardOf(el, "Head");
     expect(toolOf(card, "Locked for readers").getAttribute("aria-pressed")).toBe("false");
-    toolOf(card, "Locked for readers").click();
+    act(() => {
+      toolOf(card, "Locked for readers").click();
+    });
     await settled();
     expect(core.store.board().blocks.b?.locked).toBe(false);
     expect(toolOf(card, "Open to readers").getAttribute("aria-pressed")).toBe("true");
 
-    toolOf(card, "Open to readers").click();
+    act(() => {
+      toolOf(card, "Open to readers").click();
+    });
     await settled();
     expect(core.store.board().blocks.b?.locked).toBeNull();
   });
@@ -344,7 +366,9 @@ describe("a block's card", () => {
     const { core, el, settled } = await startCards();
 
     const card = cardOf(el, "Head");
-    card.querySelector(".blockr-card-name")?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    act(() => {
+      card.querySelector(".blockr-card-name")?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    });
     await settled();
     const field = card.querySelector<HTMLInputElement>(".blockr-card-name-field");
     if (field === null) throw new Error("No field renames the block.");
@@ -352,13 +376,15 @@ describe("a block's card", () => {
     expect(document.activeElement).toBe(field);
     expect([field.selectionStart, field.selectionEnd]).toEqual([0, 4]);
 
-    type(field, "First rows");
+    typeInto(field, "First rows");
     pressOn(field, "Enter");
     await settled();
     expect(core.store.board().blocks.b?.name).toBe("First rows");
     expect(card.querySelector(".blockr-card-name")?.textContent).toBe("First rows");
 
-    core.store.undo();
+    act(() => {
+      core.store.undo();
+    });
     await settled();
     expect(core.store.board().blocks.b?.name).toBe("Head");
   });
@@ -368,7 +394,9 @@ describe("a block's card", () => {
 
     const card = cardOf(el, "Head");
     const rename = async () => {
-      card.querySelector(".blockr-card-name")?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      act(() => {
+        card.querySelector(".blockr-card-name")?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+      });
       await settled();
       const field = card.querySelector<HTMLInputElement>(".blockr-card-name-field");
       if (field === null) throw new Error("No field renames the block.");
@@ -376,19 +404,21 @@ describe("a block's card", () => {
     };
 
     const first = await rename();
-    type(first, "Gone");
+    typeInto(first, "Gone");
     pressOn(first, "Escape");
     await settled();
     expect(card.querySelector(".blockr-card-name-field")).toBeNull();
     expect(core.store.board().blocks.b?.name).toBe("Head");
 
     const second = await rename();
-    type(second, "  ");
+    typeInto(second, "  ");
     pressOn(second, "Enter");
     await settled();
     expect(card.querySelector(".blockr-card-name-error")?.textContent).toBe("A block needs a name");
     expect(second.getAttribute("aria-invalid")).toBe("true");
-    second.blur();
+    act(() => {
+      second.blur();
+    });
     await settled();
     expect(card.querySelector(".blockr-card-name-field")).toBeNull();
     expect(core.store.board().blocks.b?.name).toBe("Head");
@@ -399,7 +429,7 @@ describe("a block's card", () => {
     const { core, el, settled } = await startCards();
 
     expect(cardOf(el, "Head").hasAttribute("data-compact")).toBe(false);
-    await core.commands.run("blockr.core-set_option", { id: "compact", value: true });
+    await act(() => core.commands.run("blockr.core-set_option", { id: "compact", value: true }));
     await settled();
     expect(cardOf(el, "Head").hasAttribute("data-compact")).toBe(true);
   });
@@ -449,7 +479,7 @@ describe("a block's status on its card", () => {
   test("fades the output of a stale block, until the block is ready again", async () => {
     const { core, el, settled } = await startCards();
     const show = async (block: BlockId) => {
-      await core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block } });
+      await act(() => core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block } }));
       await settled();
     };
 
@@ -457,7 +487,9 @@ describe("a block's status on its card", () => {
     // demands it.
     await show("c");
     await show("b");
-    core.scheduler.invalidate("c");
+    act(() => {
+      core.scheduler.invalidate("c");
+    });
     await settled();
     const merge = cardOf(el, "Merge");
     expect(dotOf(merge)?.getAttribute("data-status")).toBe("stale");
@@ -564,7 +596,9 @@ describe("the notifications on a block's card", () => {
 
     expect(listed(foldOf(cardOf(el, "Head")))).toHaveLength(3);
     conditions = [];
-    core.scheduler.invalidate("b");
+    act(() => {
+      core.scheduler.invalidate("b");
+    });
     await settled();
     expect(foldOf(cardOf(el, "Head"))).toBeNull();
   });
@@ -572,17 +606,21 @@ describe("the notifications on a block's card", () => {
   test("hold what a plugin raises about the block too, which shows as no toast", async () => {
     const { core, el, settled } = await startCards();
 
-    const withdraw = core.notifications.notify("blockr.core-edit_board_plugin", {
-      severity: "error",
-      message: "The edit was refused.",
-      code: "edit_refused",
-      about: { block: "b" },
-    });
+    const withdraw = await act(() =>
+      core.notifications.notify("blockr.core-edit_board_plugin", {
+        severity: "error",
+        message: "The edit was refused.",
+        code: "edit_refused",
+        about: { block: "b" },
+      }),
+    );
     await settled();
     expect(errors(cardOf(el, "Head"))).toEqual([["error", "The edit was refused."]]);
     expect(el.querySelector(".blockr-dock-toast")).toBeNull();
 
-    withdraw();
+    act(() => {
+      withdraw();
+    });
     await settled();
     expect(errors(cardOf(el, "Head"))).toEqual([]);
   });
@@ -621,7 +659,9 @@ describe("a block's menu", () => {
 
     const card = cardOf(el, "Head");
     const button = toolOf(card, "More actions");
-    button.focus();
+    act(() => {
+      button.focus();
+    });
     pressOn(button, "ArrowDown");
     await settled();
     const menu = blockMenu();
@@ -629,7 +669,9 @@ describe("a block's menu", () => {
 
     const rename = itemOf(menu, "Rename");
     pressOn(rename, "Enter");
-    rename.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
+    act(() => {
+      rename.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", bubbles: true, cancelable: true }));
+    });
     await settled();
     expect(blockMenu()).toBeNull();
     expect(document.activeElement).toBe(card.querySelector(".blockr-card-name-field"));
@@ -640,7 +682,9 @@ describe("a block's menu", () => {
 
     const card = cardOf(el, "Head");
     const menu = await pressMenu(card, settled);
-    itemOf(menu, "Rename").click();
+    act(() => {
+      itemOf(menu, "Rename").click();
+    });
     await settled();
     expect(blockMenu()).toBeNull();
     const field = card.querySelector<HTMLInputElement>(".blockr-card-name-field");
@@ -661,11 +705,15 @@ describe("a block's menu", () => {
   test("removes the block with Remove block", async () => {
     const { core, el, settled } = await startCards();
 
-    toolOf(cardOf(el, "Head"), "More actions").click();
+    act(() => {
+      toolOf(cardOf(el, "Head"), "More actions").click();
+    });
     await settled();
     const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    itemOf(menu, "Remove block").click();
+    act(() => {
+      itemOf(menu, "Remove block").click();
+    });
     await settled();
     expect(Object.hasOwn(core.store.board().blocks, "b")).toBe(false);
   });
@@ -677,11 +725,15 @@ describe("a block's menu", () => {
       written.mockRestore();
     });
 
-    toolOf(cardOf(el, "Head"), "More actions").click();
+    act(() => {
+      toolOf(cardOf(el, "Head"), "More actions").click();
+    });
     await settled();
     const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    itemOf(menu, "Copy block ID").click();
+    act(() => {
+      itemOf(menu, "Copy block ID").click();
+    });
     // The copy has run before anything that the click set off.
     expect(written).toHaveBeenCalledWith("b");
     await settled();
@@ -694,11 +746,15 @@ describe("a block's menu", () => {
     const before = Object.keys(core.store.board().blocks);
     const links = core.store.board().links;
     const button = toolOf(cardOf(el, "Head"), "More actions");
-    button.click();
+    act(() => {
+      button.click();
+    });
     await settled();
     const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    itemOf(menu, "Append block").click();
+    act(() => {
+      itemOf(menu, "Append block").click();
+    });
     await settled();
 
     expect(blockMenu()).toBeNull();
@@ -729,7 +785,9 @@ describe("a block's menu", () => {
     expect(added.map((id) => board.blocks[id]?.registry_id)).toEqual(["blockr.core-scatter_block"]);
     expect(Object.values(board.links)).toContainEqual({ from: "b", to: added[0], input: "data" });
 
-    core.store.undo();
+    act(() => {
+      core.store.undo();
+    });
     expect(Object.keys(core.store.board().blocks)).toEqual(before);
     expect(core.store.board().links).toEqual(links);
   });
@@ -739,7 +797,9 @@ describe("a block's menu", () => {
 
     const card = cardOf(el, "Head");
     const menu = await pressMenu(card, settled);
-    itemOf(menu, "Append block").click();
+    act(() => {
+      itemOf(menu, "Append block").click();
+    });
     await settled();
     const picker = plusMenu();
     if (picker === null) throw new Error("No + menu opened.");
@@ -759,11 +819,15 @@ describe("a block's menu", () => {
     const { el, settled } = await startCards();
 
     const button = toolOf(cardOf(el, "Head"), "More actions");
-    button.click();
+    act(() => {
+      button.click();
+    });
     await settled();
     const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    itemOf(menu, "Append block").click();
+    act(() => {
+      itemOf(menu, "Append block").click();
+    });
     await settled();
     const picker = plusMenu();
     if (picker === null) throw new Error("No + menu opened.");
@@ -786,15 +850,21 @@ describe("a block's menu", () => {
   test("links a block of a class with several inputs from its first input", async () => {
     const { core, el, settled } = await startCards();
 
-    toolOf(cardOf(el, "Head"), "More actions").click();
+    act(() => {
+      toolOf(cardOf(el, "Head"), "More actions").click();
+    });
     await settled();
     const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
-    itemOf(menu, "Append block").click();
+    act(() => {
+      itemOf(menu, "Append block").click();
+    });
     await settled();
     const picker = plusMenu();
     if (picker === null) throw new Error("No + menu opened.");
-    rowOf(picker, "merge block").click();
+    act(() => {
+      rowOf(picker, "merge block").click();
+    });
     await settled();
 
     const links = Object.values(core.store.board().links).filter((link) => link.from === "b");
@@ -819,7 +889,9 @@ describe("focus", () => {
   test("goes to a block as the keyboard's focus moves into its card", async () => {
     const { core, el } = await startCards();
 
-    toolOf(cardOf(el, "Iris"), "Preview").focus();
+    act(() => {
+      toolOf(cardOf(el, "Iris"), "Preview").focus();
+    });
     expect(core.focus.get()).toBe("a");
   });
 
@@ -849,11 +921,15 @@ describe("the card on a locked board", () => {
 
     const card = cardOf(el, "Head");
     expect(tools(card)).toEqual(["More actions"]);
-    card.querySelector(".blockr-card-name")?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    act(() => {
+      card.querySelector(".blockr-card-name")?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    });
     await settled();
     expect(card.querySelector(".blockr-card-name-field")).toBeNull();
 
-    toolOf(card, "More actions").click();
+    act(() => {
+      toolOf(card, "More actions").click();
+    });
     await settled();
     const menu = blockMenu();
     if (menu === null) throw new Error("No menu opened.");
@@ -872,9 +948,12 @@ describe("the card on a locked board", () => {
 
 describe("the card's tooltips", () => {
   const wait = (ms: number) =>
-    new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    });
+    act(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(resolve, ms);
+        }),
+    );
   const tooltip = (el: HTMLElement) => el.querySelector('[role="tooltip"]');
 
   test("show a tool's name after the pointer rests 300ms, and leave as the pointer does", async () => {
@@ -895,7 +974,9 @@ describe("the card's tooltips", () => {
   test("show at once on the keyboard's focus, and leave on Escape", async () => {
     const { el, settled } = await startCards();
 
-    toolOf(cardOf(el, "Head"), "More actions").focus();
+    act(() => {
+      toolOf(cardOf(el, "Head"), "More actions").focus();
+    });
     await settled();
     expect(tooltip(el)?.textContent).toBe("More actions");
     pressOn(document.body, "Escape");

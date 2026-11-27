@@ -3,12 +3,17 @@
 // fixtures of core's wire protocol, so that the tests need neither R nor a
 // browser (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.1.8#testing).
 // The tests of the dock's frontend and of its cards start core through it.
-// It also gives the tests the keys that a user presses and what the user types
-// into a picker's search, through blockr.ui's press() and type().
+// It also gives the tests what a user does, the keys that a user presses, the
+// clicks and what the user types into a picker's search, through blockr.ui's
+// press() and type().
+// Each runs inside React's act(), as the act environment asks that blockr.ui's
+// stubs turn on, so that React draws what it set off before the test reads
+// the page, and warns of no update outside act().
 
 import type { Json, JsonBoard } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import { press, type } from "@blockr/ui/stubs";
+import { act } from "react";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
@@ -24,7 +29,9 @@ export function pressOn(el: Element | null, key: string, init: KeyboardEventInit
   if (!(el instanceof HTMLElement)) throw new Error(`Found no element to press ${key} on.`);
   const heard: Event[] = [];
   el.addEventListener("keydown", (event) => heard.push(event), { once: true });
-  press(el, key, { cancelable: true, ...init });
+  act(() => {
+    press(el, key, { cancelable: true, ...init });
+  });
   return heard[0]?.defaultPrevented ?? false;
 }
 
@@ -33,15 +40,63 @@ export function pressFocused(key: string, init: KeyboardEventInit = {}): boolean
   return pressOn(document.activeElement, key, init);
 }
 
+// Types the text into the field, as blockr.ui's type() does.
+export function typeInto(field: HTMLInputElement | HTMLTextAreaElement, text: string): void {
+  act(() => {
+    type(field, text);
+  });
+}
+
 // Types the text into the search of one of the dock's pickers, as blockr.ui's
 // type() does, after the event beforeinput, which a browser fires as the user
 // types, and on which React Aria's Autocomplete has the first row that the
 // search keeps take the virtual focus.
 // The type() of blockr.ui fires no beforeinput.
 export function typeSearch(search: HTMLInputElement, text: string): void {
-  search.focus();
-  search.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
-  type(search, text);
+  act(() => {
+    search.focus();
+    search.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
+    type(search, text);
+  });
+}
+
+// Clicks the element as a user's pointer does: it goes down on it, then
+// clicks.
+export function click(target: Element | null | undefined): void {
+  if (target === null || target === undefined) throw new Error("Nothing to click.");
+  act(() => {
+    target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    target.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
+  });
+}
+
+// Lets the page run until what the last step set off has drawn, which takes
+// a turn of the event loop after React's render.
+export async function drawn(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
+// Tries the check until it passes, as Vitest's vi.waitFor() does, for up to a
+// second, and gives what it returns.
+// Before each try, the page runs inside act(), first for a turn of the event
+// loop, so that what the last step set off runs inside act() too, and then
+// for 10ms at a time.
+// A try runs outside act(), since React draws what it set off inside an act()
+// only as the act() ends.
+export async function waitFor<T>(check: () => T): Promise<T> {
+  const ends = Date.now() + 1000;
+  for (let ms = 0; ; ms = 10) {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, ms));
+    });
+    try {
+      return check();
+    } catch (error) {
+      if (Date.now() > ends) throw error;
+    }
+  }
 }
 
 // The tests run on happy-dom, which has no Popover API, with which the dock
