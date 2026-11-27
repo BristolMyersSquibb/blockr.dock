@@ -348,12 +348,14 @@ test_that("serve() hands navbar to the dock's frontend_args()", {
     class = "navbar_item_part_invalid"
   )
 
-  # It refuses every other argument, without evaluating it
+  # It refuses every other argument, without evaluating it.
+  # Any plausible name can become an argument of serve() later.
+  # So the names here are dummies.
   expect_error(
-    serve(board, title = "Trials", height = no_such_function()),
+    serve(board, foo = 1, bar = no_such_function()),
     paste0(
       "The app's frontend, blockr.dock-dock_plugin, takes no argument of ",
-      "`serve()` but `navbar`, and was given `title` and `height`."
+      "`serve()` but `navbar`, and was given `foo` and `bar`."
     ),
     fixed = TRUE,
     class = "frontend_args_invalid"
@@ -365,8 +367,8 @@ test_that("serve() hands navbar to the dock's frontend_args()", {
     class = "frontend_args_invalid"
   )
   expect_error(
-    serve(board, "my_board", title = no_such_function()),
-    "and was given an unnamed argument and `title`.",
+    serve(board, "my_board", foo = no_such_function()),
+    "and was given an unnamed argument and `foo`.",
     fixed = TRUE,
     class = "frontend_args_invalid"
   )
