@@ -1293,6 +1293,10 @@ button.blockr-dock-bar-name:hover {
   width: calc(var(--bk-spacing) * 6);
 }
 
+/*
+ * The grip, which a row can always be dragged by, in muted-foreground at full
+ * strength, as the row's other icons are at rest.
+ */
 .blockr-dock-views-grip {
   display: flex;
   flex: none;
@@ -1301,13 +1305,8 @@ button.blockr-dock-bar-name:hover {
   width: 14px;
   height: calc(var(--bk-spacing) * 6);
   color: var(--bk-color-muted-foreground);
-  opacity: 0.5;
   cursor: grab;
   touch-action: none;
-}
-
-.blockr-dock-views-managed:hover .blockr-dock-views-grip {
-  opacity: 1;
 }
 
 .blockr-dock-views-managed[data-dragging] {
