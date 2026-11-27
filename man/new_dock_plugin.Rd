@@ -32,7 +32,7 @@ The dock is a frontend, the plugin that draws the page.
 Its client draws the page as a React app, with dockview for the layout.
 The constructor \code{new_dock_plugin()} makes the dock plugin, of class
 \code{c("dock_plugin", "frontend_plugin", "plugin")}, whose plugin class has the
-id \code{blockr.dock-dock_plugin} (see \code{\link[blockr.core:new_plugin]{blockr.core::new_plugin()}}).
+id \code{dock_plugin} within blockr.dock (see \code{\link[blockr.core:new_plugin]{blockr.core::new_plugin()}}).
 The dock keeps its state in the board: its views, the folders that group
 them, the active view and the sections that each block's card shows.
 The schema of that state ships beside the class's module, as
@@ -67,8 +67,8 @@ state, and a board that holds it holds none for the dock.
 The client then gives the board the class's default, which holds no view,
 and the dock adds a view as it starts.
 In a grid, a bare id names a block, and \code{\link[=plg]{plg()}} names a plugin by the
-name that the script gives it in the board's \code{plugins}, or by the id of its
-class.
+name that the script gives it in the board's \code{plugins}, or by its class's
+package and id.
 
 The constructor refuses, naming each, a grid that places a panel twice.
 A panel on a rail and in a tab group counts as twice.
@@ -122,7 +122,7 @@ its value ships, as \code{js/compact-option.schema.json}.
 
 The package also offers blockr.assistant a module named \code{assistant}, in the
 \code{modules} of its \code{._BLOCKR_MODULES_}, so that the module's id is
-\code{blockr.dock-assistant}.
+\code{assistant} within blockr.dock.
 As each call of the assistant's model goes out, the module tells the model
 what the dock's state holds.
 It names the active view, and lists each view in the order of the views

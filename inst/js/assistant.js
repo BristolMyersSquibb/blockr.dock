@@ -6,6 +6,14 @@ function isObject(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+// srcts/state/ids.ts
+function isIdRecord(value) {
+  return isObject(value) && typeof value.package === "string" && typeof value.id === "string";
+}
+function sameId(a, b) {
+  return a.package === b.package && a.id === b.id;
+}
+
 // srcts/state/state.ts
 function isDockState(value) {
   return isObject(value) && isRecordOf(value.views, isView) && isRecordOf(value.folders, isFolder) && (value.active === null || typeof value.active === "string") && isRecordOf(value.visible, (sections) => isListOf(sections, (s) => s === "inputs" || s === "outputs"));
@@ -39,7 +47,7 @@ function isRail(value) {
 }
 function isPanel(value) {
   if (!isObject(value)) return false;
-  return typeof value.block === "string" !== (typeof value.plugin === "string");
+  return typeof value.block === "string" !== isIdRecord(value.plugin);
 }
 function isRecordOf(value, item) {
   return isObject(value) && Object.values(value).every(item);
@@ -118,9 +126,9 @@ function insideItself(state, id) {
 }
 
 // srcts/modules/assistant/index.ts
-var DOCK = "blockr.dock-dock_plugin";
+var DOCK = { package: "blockr.dock", id: "dock_plugin" };
 function describe(plugin, state) {
-  if (plugin !== DOCK || state === null) return [];
+  if (!sameId(plugin, DOCK) || state === null) return [];
   if (!isDockState(state)) throw new Error("The dock's state does not have the shape that its schema gives.");
   const views = orderedViews(state);
   const active = views.find(([id]) => id === state.active);
@@ -136,7 +144,9 @@ function orderedViews(state) {
   });
 }
 function placed(view) {
-  const panels = gridPanels(view.grid).map((panel) => "block" in panel ? panel.block : panel.plugin);
+  const panels = gridPanels(view.grid).map(
+    (panel) => "block" in panel ? panel.block : JSON.stringify({ package: panel.plugin.package, id: panel.plugin.id })
+  );
   return panels.length === 0 ? "empty" : panels.join(", ");
 }
 var assistant_default = { describe };

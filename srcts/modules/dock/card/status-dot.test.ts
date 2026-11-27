@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { BlockStatus, Notification, NotificationSource, Severity, Status } from "@blockr/core";
+import { id } from "@blockr/core/stubs";
 import { describe, expect, test } from "vitest";
 import { statusDot } from "./status-dot.ts";
 
@@ -79,8 +80,8 @@ describe("the status dot", () => {
     const others: NotificationSource[] = [
       { kind: "r", class: ["simpleError", "error", "condition"], request: { type: "evaluate", phase: "block_eval" } },
       { kind: "r", class: ["simpleError", "error", "condition"], request: { type: "renderer", name: "columns" } },
-      { kind: "core", code: "module_failed", module: { object: { block: "b" }, renderer: "blockr.core-table_output" } },
-      { kind: "module", code: "render_failed", module: { object: { block: "b" }, renderer: "blockr.core-table_output" } },
+      { kind: "core", code: "module_failed", module: { object: { block: "b" }, renderer: id("blockr.core", "table_output") } },
+      { kind: "module", code: "render_failed", module: { object: { block: "b" }, renderer: id("blockr.core", "table_output") } },
     ];
     const notifications = [notification("warning", ofOutput), ...others.map((source) => notification("error", source))];
     expect(statusDot(blockStatus("ready"), notifications)?.status).toBe("ready");

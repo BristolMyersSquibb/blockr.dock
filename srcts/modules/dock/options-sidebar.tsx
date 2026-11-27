@@ -340,7 +340,7 @@ function OptionLine({ option, reset }: { readonly option: OptionId; readonly res
           render={withAttributes({ title: "Reset to the default" })}
           onPress={() => {
             line.current?.querySelector(".blockr-dock-sidebar-option-ui")?.querySelector<HTMLElement>(FOCUSABLE)?.focus();
-            runEdit(core, "blockr.core-set_option", { id: option, value: reset });
+            runEdit(core, core.id("blockr.core", "set_option"), { id: option, value: reset });
           }}
         >
           Reset

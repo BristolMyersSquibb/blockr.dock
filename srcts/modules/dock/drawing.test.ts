@@ -6,7 +6,7 @@
 // one, with a pointer down in the dock where the gesture is a drag.
 
 import type { Json, JsonBoard } from "@blockr/core";
-import { HELLO, stubCore } from "@blockr/core/stubs";
+import { HELLO, id, stubCore } from "@blockr/core/stubs";
 import { createDockview } from "dockview-react";
 import type { DockviewApi, IContentRenderer } from "dockview-react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
@@ -71,12 +71,15 @@ function expectShows(shown: Grid, grid: Grid): void {
   });
 }
 
-const DOCK = "blockr.dock-dock_plugin";
+const DOCK = id("blockr.dock", "dock_plugin");
 
-const a = { block: "a" };
-const b = { block: "b" };
-const c = { block: "c" };
-const edit = { plugin: "blockr.core-edit_board_plugin" };
+// The panels of the blocks a, b and c, and that of core's Edit board plugin,
+// which the dock's state names by a plain record of the package and the id of
+// the plugin's class, as JSON holds it.
+const a: Panel = { block: "a" };
+const b: Panel = { block: "b" };
+const c: Panel = { block: "c" };
+const edit: Panel = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -121,14 +124,20 @@ function helloWith(dockState: DockState, locked: boolean) {
       id: "curious_otter",
       name: "Curious otter",
       blocks: {
-        a: { registry_id: "blockr.core-dataset_block", version: 1, state: { dataset: "iris", package: "datasets" }, name: "Data", locked: null },
-        b: { registry_id: "blockr.core-head_block", version: 1, state: { n: 3, direction: "head" }, name: "Head", locked: null },
-        c: { registry_id: "blockr.core-head_block", version: 1, state: { n: 5, direction: "tail" }, name: "Tail", locked: null },
+        a: {
+          registry_id: { package: "blockr.core", id: "dataset_block" },
+          version: 1,
+          state: { dataset: "iris", package: "datasets" },
+          name: "Data",
+          locked: null,
+        },
+        b: { registry_id: { package: "blockr.core", id: "head_block" }, version: 1, state: { n: 3, direction: "head" }, name: "Head", locked: null },
+        c: { registry_id: { package: "blockr.core", id: "head_block" }, version: 1, state: { n: 5, direction: "tail" }, name: "Tail", locked: null },
       },
       links: { ab: { from: "a", to: "b", input: "data" }, ac: { from: "a", to: "c", input: "data" } },
       stacks: {},
       options: {},
-      plugins: { [DOCK]: { state: dockState, version: 1 } },
+      plugins: { [DOCK.package]: { [DOCK.id]: { state: dockState, version: 1 } } },
     },
   };
   return {
@@ -136,15 +145,17 @@ function helloWith(dockState: DockState, locked: boolean) {
     board,
     lock: { board: locked, load: false },
     packages: { ...HELLO.packages, "blockr.dock": "0.2.1" },
-    plugins: {
-      ...Object.fromEntries(Object.entries(HELLO.plugins).filter(([id]) => id !== "blockr.core-basic_frontend_plugin")),
-      [DOCK]: {
+    plugins: [
+      ...HELLO.plugins.filter((entry) => entry.package !== "blockr.core" || entry.id !== "basic_frontend_plugin"),
+      {
+        package: DOCK.package,
+        id: DOCK.id,
         name: "Dock",
         version: 1,
         options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
         module: "blockr.dock/js/dock.js",
       },
-    },
+    ],
     options: {
       ...HELLO.options,
       compact: { package: "blockr.dock", module: "blockr.dock/compact-option.js", version: 1 },
@@ -154,7 +165,10 @@ function helloWith(dockState: DockState, locked: boolean) {
   };
 }
 
-const modules = { [DOCK]: dock, compact: compactOption, view_tabs: viewTabsOption, sync_rails: syncRailsOption };
+// The modules of the dock's board options, by their ids, and that of the dock
+// plugin's class, by the package and the id of the class.
+const modules = { compact: compactOption, view_tabs: viewTabsOption, sync_rails: syncRailsOption };
+const offered = { [DOCK.package]: { [DOCK.id]: dock } };
 
 interface StartOptions {
   readonly dockState?: DockState;
@@ -171,6 +185,7 @@ async function start(options: StartOptions = {}) {
   const { core, settled, stop } = await stubCore({
     hello: helloWith(options.dockState ?? state, options.locked ?? false),
     modules,
+    offered,
     blockrOptions: options.blockrOptions ?? {},
   });
   onTestFinished(stop);
@@ -219,8 +234,8 @@ async function start(options: StartOptions = {}) {
       await Promise.resolve();
       await settled();
     },
-    dock: () => core.store.board().plugins[DOCK] as DockState,
-    grid: (view = "main") => (core.store.board().plugins[DOCK] as DockState).views[view]?.grid,
+    dock: () => core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState,
+    grid: (view = "main") => (core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState).views[view]?.grid,
     shown: () => layoutToGrid(api.toJSON()),
     panel: (panel: Panel) => {
       const held = api.getPanel(panelId(panel));
@@ -255,7 +270,7 @@ describe("drawing a view", () => {
     const s = await start();
     const panel = s.panel(c);
 
-    await s.core.commands.run("blockr.dock-activate_view", { view: "side" });
+    await s.core.commands.run(id("blockr.dock", "activate_view"), { view: "side" });
     await s.settled();
 
     expect(s.shown()).toEqual(side);
@@ -264,7 +279,7 @@ describe("drawing a view", () => {
   });
 
   test("leaves out a panel that it cannot draw, and writes nothing back for it", async () => {
-    const gone = { plugin: "blockr.gone-gone_plugin" };
+    const gone: Panel = { plugin: { package: "blockr.gone", id: "gone_plugin" } };
     const grid: Grid = { ...main, rails: { left: rail(edit), right: rail(gone) } };
     const s = await start({ dockState: { ...state, views: { ...state.views, main: { name: "Main", folder: null, index: "a0", grid } } } });
 
@@ -274,7 +289,7 @@ describe("drawing a view", () => {
 });
 
 describe("a gesture", () => {
-  test("that shows another tab runs blockr.dock-activate_panel, which takes no undo step", async () => {
+  test("that shows another tab runs activate_panel, which takes no undo step", async () => {
     const s = await start();
 
     s.panel(a).api.setActive();
@@ -284,7 +299,7 @@ describe("a gesture", () => {
     expect(s.core.store.canUndo()).toBe(false);
   });
 
-  test("that drops a panel into another tab group runs blockr.dock-set_grid, one undo step that undo brings dockview back from", async () => {
+  test("that drops a panel into another tab group runs set_grid, one undo step that undo brings dockview back from", async () => {
     const s = await start();
     const panel = s.panel(b);
 
@@ -303,7 +318,7 @@ describe("a gesture", () => {
     expect(s.disposed).toEqual([]);
   });
 
-  test("that closes a tab runs blockr.dock-set_grid without the panel", async () => {
+  test("that closes a tab runs set_grid without the panel", async () => {
     const s = await start();
 
     s.panel(a).api.close();
@@ -312,7 +327,7 @@ describe("a gesture", () => {
     expect(s.grid()).toEqual({ ...main, children: [{ panels: [b], active: b }, group(c)] });
   });
 
-  test("that drags a sash runs blockr.dock-set_grid with the new shares", async () => {
+  test("that drags a sash runs set_grid with the new shares", async () => {
     const s = await start();
 
     await s.drag(() => {
@@ -348,7 +363,7 @@ describe("a gesture", () => {
 
     window.dispatchEvent(new PointerEvent("pointerup"));
     await s.settled();
-    expect(run.mock.calls).toEqual([["blockr.dock-activate_panel", { view: "main", panel: a }]]);
+    expect(run.mock.calls).toEqual([[id("blockr.dock", "activate_panel"), { view: "main", panel: a }]]);
   });
 
   test("commits what a drop changed as the drag ends, where the browser sends no pointerup after it, as Safari does", async () => {
@@ -364,13 +379,13 @@ describe("a gesture", () => {
 
     document.dispatchEvent(new Event("dragend"));
     await s.settled();
-    expect(run.mock.calls.map(([id]) => id)).toEqual(["blockr.dock-set_grid"]);
+    expect(run.mock.calls.map(([command]) => command)).toEqual([id("blockr.dock", "set_grid")]);
     const stored = s.grid();
     if (stored === undefined) throw new Error("The view Main has no grid.");
     expectShows(s.shown(), stored);
   });
 
-  test("that collapses a rail runs blockr.dock-collapse_rail, on every view while sync_rails is on, with no undo step", async () => {
+  test("that collapses a rail runs collapse_rail, on every view while sync_rails is on, with no undo step", async () => {
     const s = await start();
 
     s.api.getEdgeGroup("left")?.collapse();
@@ -397,7 +412,7 @@ describe("a grid that changes otherwise", () => {
   test("has dockview show the panel that another origin's command shows, keeping every panel", async () => {
     const s = await start();
 
-    await s.core.commands.run("blockr.dock-show_panel", { panel: a });
+    await s.core.commands.run(id("blockr.dock", "show_panel"), { panel: a });
     await s.settled();
 
     expect(s.shown()).toEqual({ ...main, children: [group(a, b), group(c)] });
@@ -408,7 +423,7 @@ describe("a grid that changes otherwise", () => {
     const s = await start();
     const panel = s.panel(a);
 
-    await s.core.commands.run("blockr.dock-move_panel", { view: "main", panel: a, near: c, side: "below" });
+    await s.core.commands.run(id("blockr.dock", "move_panel"), { view: "main", panel: a, near: c, side: "below" });
     await s.settled();
 
     expect(s.shown()).toEqual(s.grid());
@@ -419,11 +434,11 @@ describe("a grid that changes otherwise", () => {
   test("collapses or opens a rail that another origin's command collapses or opens", async () => {
     const s = await start();
 
-    await s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: true });
+    await s.core.commands.run(id("blockr.dock", "collapse_rail"), { view: "main", edge: "left", collapsed: true });
     await s.settled();
     expect(s.api.getEdgeGroup("left")?.isCollapsed()).toBe(true);
 
-    await s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: false });
+    await s.core.commands.run(id("blockr.dock", "collapse_rail"), { view: "main", edge: "left", collapsed: false });
     await s.settled();
     expect(s.api.getEdgeGroup("left")?.isCollapsed()).toBe(false);
   });
@@ -431,7 +446,7 @@ describe("a grid that changes otherwise", () => {
   test("renames the tab of a block that is renamed", async () => {
     const s = await start();
 
-    await s.core.commands.run("blockr.core-change_block", { id: "b", name: "Top rows" });
+    await s.core.commands.run(id("blockr.core", "change_block"), { id: "b", name: "Top rows" });
     await s.settled();
 
     expect(s.panel(b).title).toBe("Top rows");
@@ -440,7 +455,7 @@ describe("a grid that changes otherwise", () => {
   test("drops the panel of a block that leaves the board", async () => {
     const s = await start();
 
-    await s.core.commands.run("blockr.core-remove_block", { id: "b" });
+    await s.core.commands.run(id("blockr.core", "remove_block"), { id: "b" });
     await s.settled();
 
     expect(s.api.getPanel(panelId(b))).toBeUndefined();
@@ -504,7 +519,7 @@ describe("the narrow column", () => {
     expect(s.updateOptions).toHaveBeenLastCalledWith({ locked: true, disableDnd: true });
   });
 
-  test("has a tab switch run blockr.dock-activate_panel and a closed tab blockr.dock-remove_panel, on the stored grid", async () => {
+  test("has a tab switch run activate_panel and a closed tab remove_panel, on the stored grid", async () => {
     const s = await start({ breakpoint: Infinity });
 
     s.panel(a).api.setActive();

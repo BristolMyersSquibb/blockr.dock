@@ -3,11 +3,10 @@
 // The dock reads dockview's layout back into a grid once the user lets go,
 // and compares it with the grid that dockview showed before the gesture:
 // - Where only the panel that a tab group or rail shows changed, it runs
-//   blockr.dock-activate_panel, which takes no undo step.
-// - Where only whether a rail is collapsed changed, it runs
-//   blockr.dock-collapse_rail, which takes none either.
-// - Where anything else changed, it runs blockr.dock-set_grid, which takes
-//   one.
+//   activate_panel, which takes no undo step.
+// - Where only whether a rail is collapsed changed, it runs collapse_rail,
+//   which takes none either.
+// - Where anything else changed, it runs set_grid, which takes one.
 // - Where nothing changed, it runs nothing.
 // It compares with what dockview showed, rather than with the stored grid, so
 // that a stored grid out of its canonical form, which dockview draws in that
@@ -30,14 +29,17 @@
 // In the narrow column, only which panel a row shows and which panels it
 // holds count, since the column's arrangement and sizes are the column's
 // alone.
-// There, the dock runs blockr.dock-activate_panel for a panel that a row
-// shows now and blockr.dock-remove_panel for a panel that a row lost.
+// There, the dock runs activate_panel for a panel that a row shows now and
+// remove_panel for a panel that a row lost.
 
 import type { Json } from "@blockr/core";
 import { EDGES, gridChanges, gridPanels, samePanel, tabGroups, withStoredShares } from "../state/index.ts";
 import type { Edge, Grid, Panel, Rail, ViewId } from "../state/index.ts";
 
-// A command that the dock runs, with its args.
+// A command of the dock's that the dock runs, by its id within the package,
+// with its args.
+// The gestures have no `core` to make the command's Id, which the dock makes
+// as it sends the run (../modules/dock/drawing.ts).
 export interface Run {
   readonly id: string;
   readonly args: Json;
@@ -65,12 +67,12 @@ export function gestureRuns(view: ViewId, shown: Grid, read: Grid, stored: Grid,
   );
   const changes = gridChanges(before, after);
   if (changes.panels || changes.arrangement || changes.sizes) {
-    return [{ id: "blockr.dock-set_grid", args: { view, grid: after } }];
+    return [{ id: "set_grid", args: { view, grid: after } }];
   }
 
   const runs: Run[] = [];
   const activate = (panel: Panel) => {
-    runs.push({ id: "blockr.dock-activate_panel", args: { view, panel } });
+    runs.push({ id: "activate_panel", args: { view, panel } });
   };
   const groups = tabGroups(before);
   tabGroups(after).forEach((group, i) => {
@@ -82,7 +84,7 @@ export function gestureRuns(view: ViewId, shown: Grid, read: Grid, stored: Grid,
     if (was === undefined || rail === undefined) continue;
     if (!samePanel(was.active, rail.active)) activate(rail.active);
     if (was.collapsed !== rail.collapsed) {
-      runs.push({ id: "blockr.dock-collapse_rail", args: { view, edge, collapsed: rail.collapsed } });
+      runs.push({ id: "collapse_rail", args: { view, edge, collapsed: rail.collapsed } });
     }
   }
   return runs;
@@ -98,8 +100,8 @@ export function columnRuns(view: ViewId, shown: Grid, read: Grid): Run[] {
     .map((group) => group.active)
     .filter((panel) => !showing.some((other) => samePanel(other, panel)));
   return [
-    ...removed.map((panel) => ({ id: "blockr.dock-remove_panel", args: { view, panel } })),
-    ...shows.map((panel) => ({ id: "blockr.dock-activate_panel", args: { view, panel } })),
+    ...removed.map((panel) => ({ id: "remove_panel", args: { view, panel } })),
+    ...shows.map((panel) => ({ id: "activate_panel", args: { view, panel } })),
   ];
 }
 

@@ -1,6 +1,7 @@
 // The helpers of a view's grid, which the `update` and the dock's commands
 // share.
 
+import { id } from "@blockr/core/stubs";
 import { describe, expect, test } from "vitest";
 import {
   canonicalGrid,
@@ -16,6 +17,7 @@ import {
   RAIL_SIZE,
   resized,
   resizeFailures,
+  samePanel,
   showing,
   withStoredShares,
 } from "./grid.ts";
@@ -24,9 +26,14 @@ import type { Grid, Panel, Rail, Split, TabGroup } from "./types.ts";
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
-const edit = { plugin: "blockr.core-edit_board_plugin" };
+// Core's Edit board plugin, by the record of its class that the dock's state
+// holds, as JSON gives it.
+const edit = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
+// The same panel, by the Id that core makes of the class, as the dock's code
+// writes one into a grid.
+const editById = { plugin: id("blockr.core", "edit_board_plugin") };
 // The notes plugin, of blockr.test, a package that only the tests know.
-const notes = { plugin: "blockr.test-notes_plugin" };
+const notes = { plugin: { package: "blockr.test", id: "notes_plugin" } };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -54,6 +61,21 @@ const overview: Grid = {
 describe("gridPanels()", () => {
   test("gives the panels that a grid places in reading order, its tab groups before its rails", () => {
     expect(gridPanels(overview)).toEqual([a, b, c, notes, edit]);
+  });
+});
+
+describe("samePanel()", () => {
+  test("names a plugin's panel the same by the record and by the Id of its class", () => {
+    expect(samePanel(edit, editById)).toBe(true);
+    expect(samePanel(editById, edit)).toBe(true);
+    expect(samePanel(edit, { plugin: { package: "blockr.core", id: "edit_board_plugin" } })).toBe(true);
+  });
+
+  test("tells apart the classes of one id in two packages, and a plugin's panel from a block's", () => {
+    expect(samePanel(edit, { plugin: { package: "blockr.test", id: "edit_board_plugin" } })).toBe(false);
+    expect(samePanel(edit, { plugin: { package: "blockr.core", id: "notes_plugin" } })).toBe(false);
+    expect(samePanel(edit, { block: "edit_board_plugin" })).toBe(false);
+    expect(samePanel({ block: "edit_board_plugin" }, edit)).toBe(false);
   });
 });
 
@@ -182,6 +204,11 @@ describe("gridFailures()", () => {
     ]);
   });
 
+  test("names a plugin's panel placed twice by its class, as core's messages name an id, whether a record or an Id names it", () => {
+    const grid: Grid = { ...overview, rails: { left: rail(edit), right: rail(editById) } };
+    expect(gridFailures(grid)).toEqual(['The grid places the panel of the plugin "edit_board_plugin of blockr.core" more than once.']);
+  });
+
   test("allows the shares of a split to sum to 1 as floating point does", () => {
     const grid: Grid = { orientation: "horizontal", children: [group(a), group(b), group(c)], sizes: [0.1, 0.2, 0.7] };
     expect(gridFailures(grid)).toEqual([]);
@@ -220,6 +247,7 @@ describe("placePanel()", () => {
 
   test("leaves a grid that places the panel already, on a rail too, as it is", () => {
     expect(placePanel(overview, edit)).toBe(overview);
+    expect(placePanel(overview, editById)).toBe(overview);
     expect(placePanel(overview, c)).toBe(overview);
   });
 });
@@ -320,7 +348,7 @@ describe("placeFailures()", () => {
   test("names a `near` that the grid lacks, and one on a rail beside which a panel would go", () => {
     expect(placeFailures(overview, { near: { block: "z" } })).toEqual(['The view does not show the panel of the block "z", which near names.']);
     expect(placeFailures(overview, { near: edit, side: "below" })).toEqual([
-      'The view shows the panel of the plugin "blockr.core-edit_board_plugin", which near names, on a rail, which takes a panel only within.',
+      'The view shows the panel of the plugin "edit_board_plugin of blockr.core", which near names, on a rail, which takes a panel only within.',
     ]);
   });
 
@@ -387,6 +415,15 @@ describe("gridChanges()", () => {
   test("finds no change where only the panel that a tab group or rail shows, or a rail's collapse, changes", () => {
     const grid = collapsedRail(showing(overview, a), "left", true);
     expect(gridChanges(overview, grid)).toEqual(none);
+  });
+
+  test("finds no change where a plugin's panel holds its package and id in the other order, or as an Id", () => {
+    // The overview's left rail, with the Edit board plugin's panel written as
+    // given.
+    const withEdit = (panel: Panel): Grid => ({ ...overview, rails: { left: rail(panel) } });
+    const reversed = { plugin: { id: "edit_board_plugin", package: "blockr.core" } };
+    expect(gridChanges(overview, withEdit(reversed))).toEqual(none);
+    expect(gridChanges(overview, withEdit(editById))).toEqual(none);
   });
 
   test("finds other panels, which change the arrangement too", () => {

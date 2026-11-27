@@ -3,19 +3,20 @@
 // Some tests draw the layout with dockview itself, on happy-dom, which lays
 // it out at the size that the test gives.
 
+import { id } from "@blockr/core/stubs";
 import { createDockview, Orientation } from "dockview-react";
 import type { DockviewApi, IContentRenderer } from "dockview-react";
 import { describe, expect, test } from "vitest";
-import { RAIL_SIZE } from "../state/index.ts";
+import { idText, RAIL_SIZE } from "../state/index.ts";
 import type { Grid, Panel, Rail, TabGroup } from "../state/index.ts";
 import { gridToLayout, layoutToGrid, PANEL_COMPONENT, panelFromId, panelId, railId } from "./index.ts";
 
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
-const edit = { plugin: "blockr.core-edit_board_plugin" };
+const edit = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
 // The notes plugin, of blockr.test, a package that only the tests know.
-const notes = { plugin: "blockr.test-notes_plugin" };
+const notes = { plugin: { package: "blockr.test", id: "notes_plugin" } };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -40,8 +41,9 @@ const overview: Grid = {
   rails: { left: rail(edit) },
 };
 
-// The title of every panel's tab: the block's id or the plugin class's id.
-const named = (panel: Panel) => ("block" in panel ? panel.block : panel.plugin);
+// The title of every panel's tab: the block's id, or the plugin class's id as
+// core's messages name one.
+const named = (panel: Panel) => ("block" in panel ? panel.block : idText(panel.plugin));
 
 const SIZE = { width: 1000, height: 800 };
 
@@ -69,10 +71,16 @@ function dockview(size = SIZE) {
 }
 
 describe("panelId()", () => {
-  test("names a panel by the JSON of its block or its plugin class", () => {
+  test("names a panel by the JSON of its block or of the package and the id of its plugin's class", () => {
     expect(panelId(a)).toBe('{"block":"a"}');
-    expect(panelId(edit)).toBe('{"plugin":"blockr.core-edit_board_plugin"}');
+    expect(panelId(edit)).toBe('{"plugin":{"package":"blockr.core","id":"edit_board_plugin"}}');
     expect(panelFromId(panelId(edit))).toEqual(edit);
+  });
+
+  test("gives one id for a plugin's panel, whether the Id of its class or a record names it, with its fields in either order", () => {
+    expect(panelId({ plugin: id("blockr.core", "edit_board_plugin") })).toBe(panelId(edit));
+    expect(panelId({ plugin: { id: "edit_board_plugin", package: "blockr.core" } })).toBe(panelId(edit));
+    expect(panelId({ plugin: { package: "blockr.test", id: "edit_board_plugin" } })).not.toBe(panelId(edit));
   });
 
   test("names the panel of a block whose id holds any character", () => {
@@ -81,8 +89,22 @@ describe("panelId()", () => {
   });
 
   test("leaves a dockview id that names no panel without one", () => {
-    for (const id of ["1", "group-1", "{}", '{"block":1}', '{"block":"a","plugin":"p"}', "[]", "null"]) {
-      expect(panelFromId(id)).toBeUndefined();
+    const notPanels = [
+      "1",
+      "group-1",
+      "{}",
+      '{"block":1}',
+      '{"block":"a","plugin":"p"}',
+      '{"plugin":"blockr.core-edit_board_plugin"}',
+      '{"plugin":{"package":"blockr.core"}}',
+      '{"plugin":{"package":"blockr.core","id":1}}',
+      '{"plugin":{"package":"blockr.core","id":"edit_board_plugin","name":"Edit"}}',
+      '{"plugin":["blockr.core","edit_board_plugin"]}',
+      "[]",
+      "null",
+    ];
+    for (const dockviewId of notPanels) {
+      expect(panelFromId(dockviewId)).toBeUndefined();
     }
   });
 

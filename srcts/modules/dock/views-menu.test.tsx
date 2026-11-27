@@ -8,7 +8,7 @@ import { openDialog, openMenu } from "@blockr/ui/stubs";
 import { act } from "react";
 import { describe, expect, onTestFinished, test } from "vitest";
 import type { DockState, Folder, FolderId, View } from "../../state/index.ts";
-import { DOCK, click, drawn, hello as dockHello, modules, pressFocused, pressOn, typeInto } from "./testing.ts";
+import { DOCK, click, drawn, hello as dockHello, modules, offered, pressFocused, pressOn, typeInto } from "./testing.ts";
 
 function view(name: string, folder: FolderId | null, index: string): View {
   return { name, folder, index, grid: { orientation: "horizontal", children: [], sizes: [] } };
@@ -60,14 +60,14 @@ async function startViews(options: StartOptions = {}) {
         view_tabs: { value: options.tabs ?? false, version: 1, package: "blockr.dock" },
         sync_rails: { value: true, version: 1, package: "blockr.dock" },
       },
-      plugins: { [DOCK]: { state: options.state ?? navigation, version: 1 } },
+      plugins: { [DOCK.package]: { [DOCK.id]: { state: options.state ?? navigation, version: 1 } } },
     },
   };
   const frontend: Record<string, Json> = options.navbar === undefined ? {} : { navbar: [...options.navbar] };
   const hello = { ...dockHello, lock: { board: options.locked ?? false, load: false }, frontend, board };
   const el = document.createElement("div");
   document.body.append(el);
-  const s = await stubCore({ hello, modules, el });
+  const s = await stubCore({ hello, modules, offered, el });
   onTestFinished(() => {
     s.stop();
     el.remove();
@@ -79,7 +79,7 @@ async function startViews(options: StartOptions = {}) {
 
 // The dock's state on the board.
 function stateOf(core: CoreApi): DockState {
-  return core.store.board().plugins[DOCK] as DockState;
+  return core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState;
 }
 
 function bar(el: HTMLElement): HTMLElement {

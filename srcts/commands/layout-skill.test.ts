@@ -8,7 +8,7 @@
 
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { stubCore } from "@blockr/core/stubs";
+import { id, stubCore } from "@blockr/core/stubs";
 import { expect, onTestFinished, test } from "vitest";
 import { DOCK, dockCommands } from "./index.ts";
 
@@ -59,18 +59,32 @@ test("the catalogue shows the skill's description in full", () => {
   expect(description.length).toBeLessThanOrEqual(DESCRIPTION_MAX_CHARS);
 });
 
+// The ids that the skill names, each by its package and its id, as the model
+// passes an id to the assistant's tools, as
+// { "package": "blockr.dock", "id": "add_view" }, as core makes them.
+function namedIds(text: string) {
+  return new Set([...text.matchAll(/\{ "package": "([\w.]+)", "id": "(\w+)" \}/g)].map(([, pkg = "", within = ""]) => id(pkg, within)));
+}
+
+test("the skill names each command and class by its package and its id, and none by one string, as a joined id did", () => {
+  expect(namedIds(SKILL).size).toBeGreaterThan(0);
+  expect(SKILL.match(/\bblockr\.(?:core|dock)-\w+/g)).toBeNull();
+});
+
 test("the skill names only commands that the dock and core register", async () => {
   const { core, settled, stop } = await stubCore();
   onTestFinished(stop);
   await settled();
-  const registered = new Set([...Object.keys(core.commands.registered()), ...dockCommands.map((command) => command.id)]);
+  // Core registers the dock's commands under the package of the dock plugin's
+  // class.
+  const registered = new Set([...core.commands.registered().keys(), ...dockCommands.map((command) => id(DOCK.package, command.id))]);
 
   // The skill names plugins too, by the ids of their classes, as the dock's
   // and that of core's Edit board plugin.
-  const named = new Set(SKILL.match(/\bblockr\.(?:core|dock)-\w+/g));
-  named.delete(DOCK);
-  for (const plugin of Object.keys(core.plugins.appPlugins())) named.delete(plugin);
+  const named = namedIds(SKILL);
+  named.delete(id(DOCK.package, DOCK.id));
+  for (const plugin of core.plugins.appPlugins().keys()) named.delete(plugin);
 
   expect(named.size).toBeGreaterThan(0);
-  expect([...named].filter((id) => !registered.has(id))).toEqual([]);
+  expect([...named].filter((command) => !registered.has(command))).toEqual([]);
 });

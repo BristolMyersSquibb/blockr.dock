@@ -79,13 +79,14 @@ board_fixture_values <- function() {
         "writes as an array by the schema of the dock's state, and a rail on",
         "the left edge with the panel of core's Edit board plugin. The script",
         "names that plugin edit in the board's plugins, and the state names",
-        "it by the id of its class, blockr.core-edit_board_plugin. The plugin",
-        "keeps no state, so the board holds none for it. The view side, the",
-        "active view, gets the default grid over the one panel that the",
-        "script gives it. The card of b shows its output alone. The stack has",
-        "no color, and the board holds the value of the board option compact",
-        "that the script sets, and no other. The client opens the board with",
-        "the dock plugin's class and keeps the dock's state as it is."
+        "it by the package and the id of its class, edit_board_plugin of",
+        "blockr.core. The plugin keeps no state, so the board holds none for",
+        "it. The view side, the active view, gets the default grid over the",
+        "one panel that the script gives it. The card of b shows its output",
+        "alone. The stack has no color, and the board holds the value of the",
+        "board option compact that the script sets, and no other. The client",
+        "opens the board with the dock plugin's class and keeps the dock's",
+        "state as it is."
       ),
       board = new_board(
         blocks = c(

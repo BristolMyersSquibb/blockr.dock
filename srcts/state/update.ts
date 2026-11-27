@@ -37,7 +37,7 @@ import { isDockState } from "./state.ts";
 import type { DockState, Folder, FolderId, Panel, View } from "./types.ts";
 
 export function update(delta: Delta, board: Board, plugin: PluginClassId): Patch[] {
-  const stored = board.plugins[plugin];
+  const stored = board.plugins[plugin.package]?.[plugin.id];
   const given = stored === undefined ? undefined : patched(stored, delta.patches ?? [], plugin);
   const removed = new Set(delta.blocks?.rm ?? []);
   const added = Object.keys(delta.blocks?.add ?? {});
@@ -53,7 +53,7 @@ export function update(delta: Delta, board: Board, plugin: PluginClassId): Patch
     moved.active !== null && Object.hasOwn(moved.views, moved.active) ? moved.active : firstView(moved);
   const state = placeBlocks({ ...moved, active }, added);
 
-  const at = (...segments: string[]) => pointer(["plugins", plugin, ...segments]);
+  const at = (...segments: string[]) => pointer(["plugins", plugin.package, plugin.id, ...segments]);
   const patches: Patch[] = [];
   for (const [id, view] of Object.entries(state.views)) {
     if (view.grid !== given.views[id]?.grid) {
@@ -99,8 +99,8 @@ interface Move {
 // The views and folders that a removed folder held keep their order.
 // Where the board before the delta lacks the folder too, they go to the end
 // of the top.
-// The command blockr.dock-remove_folder moves what the folder held in the
-// same way.
+// The dock's command remove_folder moves what the folder held in the same
+// way.
 export function rehoused(state: DockState, before: DockState): { state: DockState; moves: Move[] } {
   const lacks = (folder: FolderId | null): folder is FolderId => folder !== null && !Object.hasOwn(state.folders, folder);
   const entries = (kind: Move["kind"], record: Readonly<Record<string, View | Folder>>) =>

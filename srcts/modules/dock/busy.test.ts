@@ -1,14 +1,13 @@
 // When the logo on the bar turns, on a scheduler whose statuses the test sets.
 
 import type { Block, BlockId, BlockStatus, Board, CoreApi, Status } from "@blockr/core";
+import { id } from "@blockr/core/stubs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { DockState } from "../../state/index.ts";
 import { trackBusy } from "./busy.ts";
 import type { Narrow } from "./narrow.ts";
 
-const DOCK = "blockr.dock-dock_plugin";
-
-const head: Block = { registry_id: "blockr.core-head_block", state: {}, name: "Head", locked: null };
+const head: Block = { registry_id: id("blockr.core", "head_block"), state: {}, name: "Head", locked: null };
 
 // The active view shows the block "a", and "b" only on a collapsed rail, which
 // the narrow column shows.
@@ -38,15 +37,16 @@ const board: Board = {
   links: {},
   stacks: {},
   options: {},
-  plugins: { [DOCK]: state },
+  plugins: { "blockr.dock": { dock_plugin: state } },
 };
 
 // A store and a scheduler whose statuses the test sets, each of which says
-// what changed as the test changes it.
+// what changed as the test changes it, beside core's id().
 function fakeCore() {
   const statuses = new Map<BlockId, Status>();
   const heard = new Set<(changed: readonly BlockId[]) => void>();
   const core = {
+    id,
     store: { board: () => board, subscribe: () => () => undefined },
     scheduler: {
       status: (id: BlockId) => {
@@ -60,7 +60,7 @@ function fakeCore() {
         };
       },
     },
-  } as unknown as Pick<CoreApi, "store" | "scheduler">;
+  } as unknown as Pick<CoreApi, "id" | "store" | "scheduler">;
   const set = (id: BlockId, status: Status) => {
     statuses.set(id, status);
     for (const fn of [...heard]) fn([id]);

@@ -31,11 +31,12 @@
 #'   control's id.
 #'   The dock draws that control in the item's place, and the `storage` part
 #'   draws the other controls.
-#' * A module that a package offers, from `navbar_item()`, by the module's
-#'   id, `{pkg}-{name}`.
+#' * A module that a package offers, from `navbar_item()`, by the module's id
+#'   and the package that offers it, as
+#'   `navbar_item("deck", "deck_button", package = "blockr.test")`.
 #'   The module draws the item.
-#'   R checks that the id is a non-empty string.
-#'   It does not check that a package offers the module.
+#'   R checks that the id and the package are non-empty strings.
+#'   It does not check that the package offers the module.
 #'   The client loads the module as it draws the bar.
 #'
 #' Items combine with `c()`.
@@ -53,7 +54,9 @@
 #' Each item is a list of its `kind`, its `id` and the fields of its kind.
 #' R writes it as a JSON object for the client.
 #' The kinds are `part`, `storage`, `link` with `label` and `href`, `menu`
-#' with `label` and `items`, and `module` with `module`.
+#' with `label` and `items`, and `module` with `module`, a list of the
+#' module's `package` and `id`, which R writes as
+#' `{ "package": "blockr.test", "id": "deck_button" }`.
 #'
 #' @param id The item's id, a non-empty string.
 #'   For `navbar_storage()`, the id of the storage plugin's control.
@@ -63,8 +66,8 @@
 #'   `c()`.
 #'   For `frontend_args()`, the other arguments of [blockr.core::serve()].
 #'   The dock refuses them.
-#' @param module The id of a module that a package offers, which has the form
-#'   `{package}-{name}`
+#' @param module The id of a module within the package that offers it
+#' @param package For `navbar_item()`, the package that offers the module
 #' @param items The items to append: an item, a `navbar_items` collection or
 #'   a list of items
 #' @param drop The ids of default items to leave out
@@ -118,8 +121,8 @@ navbar_storage <- function(id) {
 
 #' @rdname navbar
 #' @export
-navbar_item <- function(id, module) {
-  new_navbar_item("module", id, module = module)
+navbar_item <- function(id, module, package) {
+  new_navbar_item("module", id, module = list(package = package, id = module))
 }
 
 # One of the dock's own parts of the bar, by its id, as `default_navbar()`
@@ -274,12 +277,18 @@ validate_navbar_label <- function(x) {
   invisible(x)
 }
 
+# A module item names its module by the package that offers it and the
+# module's id within the package, each a non-empty string.
 validate_navbar_module <- function(x) {
 
-  if (!is_nonempty_string(x[["module"]])) {
+  module <- x[["module"]]
+
+  if (!is.list(module) || !is_nonempty_string(module[["package"]]) ||
+        !is_nonempty_string(module[["id"]])) {
     blockr_abort(
-      "Expecting the module of the navbar item \"{x$id}\" to be the id of a ",
-      "module, a non-empty string.",
+      "Expecting the module of the navbar item \"{x$id}\" to be named by the ",
+      "package that offers it and by its id within the package, each a ",
+      "non-empty string.",
       class = "navbar_item_module_invalid"
     )
   }
@@ -454,8 +463,8 @@ frontend_args.dock_plugin <- function(x, ..., navbar = default_navbar()) {
     nms <- ifelse(nzchar(nms), paste0("`", nms, "`"), "an unnamed argument")
 
     blockr_abort(
-      "The app's frontend, {plugin_class_id(x)}, takes no argument of ",
-      "`serve()` but `navbar`, and was given {nms}.",
+      "The app's frontend, {id_label(plugin_class_id(x))}, takes no argument ",
+      "of `serve()` but `navbar`, and was given {nms}.",
       class = "frontend_args_invalid"
     )
   }

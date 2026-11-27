@@ -12,7 +12,7 @@
 import type { CoreApi, Json, JsonBoard, Option, OptionHost, OptionModule, PluginClass } from "@blockr/core";
 import { reactModule, useValue } from "@blockr/core/react";
 import type { ModuleProps } from "@blockr/core/react";
-import { HELLO, stubCore } from "@blockr/core/stubs";
+import { HELLO, id, stubCore } from "@blockr/core/stubs";
 import { Button, ComboBox, ComboBoxItem, Menu, MenuItem, MenuTrigger } from "@blockr/ui";
 import { expectedErrors, find, listFromField, menuItem, openMenu, optionFromLabel } from "@blockr/ui/stubs";
 import { act } from "react";
@@ -24,9 +24,11 @@ import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
 import { blockModules, click, drawn, pressFocused, typeInto, waitFor } from "./testing.ts";
 
-const DOCK = "blockr.dock-dock_plugin";
-const BASIC = "blockr.core-basic_frontend_plugin";
-const VIEWER = "blockr.test-viewer_plugin";
+// The classes of the dock, of core's basic frontend, which the dock takes the
+// place of, and of the plugin of blockr.test, by their Ids.
+const DOCK = id("blockr.dock", "dock_plugin");
+const BASIC = id("blockr.core", "basic_frontend_plugin");
+const VIEWER = id("blockr.test", "viewer_plugin");
 
 // The categories of the board options of the dock and of blockr.test.
 // Core puts board options of its own on the board too, for reasons of its own.
@@ -205,36 +207,48 @@ async function startSidebar(start: Start = {}) {
   const hello = {
     ...HELLO,
     packages: { ...HELLO.packages, "blockr.dock": "0.2.1", "blockr.test": "1.0.0" },
-    plugins: {
-      ...Object.fromEntries(Object.entries(HELLO.plugins).filter(([id]) => id !== BASIC)),
-      [DOCK]: {
+    plugins: [
+      ...HELLO.plugins.filter((entry) => id(entry.package, entry.id) !== BASIC),
+      {
+        package: DOCK.package,
+        id: DOCK.id,
         name: "Dock",
         version: 1,
         options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
         module: "blockr.dock/js/dock.js",
       },
-      [VIEWER]: { name: "Viewer", version: 1, options: start.overlays === true ? ["zoom", "layout", "shade"] : ["zoom"], module: "blockr.test/viewer.js" },
-    },
+      {
+        package: VIEWER.package,
+        id: VIEWER.id,
+        name: "Viewer",
+        version: 1,
+        options: start.overlays === true ? ["zoom", "layout", "shade"] : ["zoom"],
+        module: "blockr.test/viewer.js",
+      },
+    ],
     options,
     lock: { board: start.locked ?? false, load: false },
     board,
   };
   const modules = {
-    [DOCK]: dock,
     compact: compactOption,
     view_tabs: viewTabsOption,
     sync_rails: syncRailsOption,
     ...blockModules,
-    [VIEWER]: { api: 1, default: viewer },
     zoom: { api: 1, default: zoom },
     grain: { api: 1, default: grain },
     texture: { api: 1, default: texture },
     layout: { api: 1, default: layout },
     shade: { api: 1, default: shade },
   };
+  // The modules of the plugin classes, by the package and the id of each class.
+  const offered = {
+    [DOCK.package]: { [DOCK.id]: dock },
+    [VIEWER.package]: { [VIEWER.id]: { api: 1, default: viewer } },
+  };
   const el = document.createElement("div");
   document.body.append(el);
-  const s = await stubCore({ hello, modules, el });
+  const s = await stubCore({ hello, modules, offered, el });
   onTestFinished(() => {
     s.stop();
     el.remove();
@@ -369,7 +383,7 @@ describe("the options sidebar", () => {
     await open(el);
     expect(summary(el, "Extra options").textContent).toBe("Extra options1, 1 board option");
 
-    await act(() => core.commands.run("blockr.core-set_option", { id: "texture", value: 2 }));
+    await act(() => core.commands.run(id("blockr.core", "set_option"), { id: "texture", value: 2 }));
     await drawn();
     expect(summary(el, "Extra options").textContent).toBe("Extra options2, 2 board options");
   });
@@ -751,7 +765,7 @@ describe("the options sidebar", () => {
     // Nothing puts grain on the board.
     expect(ownNames(el)).toEqual(["Board options", "Theme options", "View options"]);
 
-    await act(() => core.commands.run("blockr.core-set_option", { id: "grain", value: 5 }));
+    await act(() => core.commands.run(id("blockr.core", "set_option"), { id: "grain", value: 5 }));
     await drawn();
     expect(ownNames(el)).toEqual(["Board options", "Extra options", "Theme options", "View options"]);
   });

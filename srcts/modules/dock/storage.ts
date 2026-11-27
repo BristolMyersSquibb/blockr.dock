@@ -17,6 +17,7 @@
 // rejects, and tells the user nothing more.
 
 import type { CoreApi, StorageControl } from "@blockr/core";
+import { idText } from "../../state/index.ts";
 import { asError, errorMessage } from "./errors.ts";
 import type { NavbarItem } from "./navbar-items.ts";
 
@@ -42,7 +43,7 @@ export function drawnControls(core: CoreApi): Drawn | undefined {
   const storage = core.plugins.storage();
   if (storage === undefined) return undefined;
   // The app's storage plugin, whose class gives that storage.
-  const plugin = Object.keys(core.plugins.appPlugins()).find((id) => core.plugins.pluginClass(id).storage === storage);
+  const plugin = [...core.plugins.appPlugins().keys()].find((id) => core.plugins.pluginClass(id).storage === storage);
   if (plugin === undefined) return undefined;
   const twice = new Set<string>();
   let controls: StorageControl[];
@@ -50,7 +51,7 @@ export function drawnControls(core: CoreApi): Drawn | undefined {
     controls = distinct(storage.controls({ core, plugin }), twice);
   } catch (error) {
     const failed = errorMessage(error);
-    return { failed, package: packageFromId(plugin), problem: `The storage controls of ${plugin} failed: ${failed}` };
+    return { failed, package: plugin.package, problem: `The storage controls of ${idText(plugin)} failed: ${failed}` };
   }
   if (twice.size === 0) return { controls };
   const ids = [...twice].map((id) => JSON.stringify(id)).join(", ");
@@ -87,15 +88,6 @@ export async function runButton(core: Pick<CoreApi, "log">, button: Button): Pro
   } catch (error) {
     core.log("blockr.dock").error(asError(error));
   }
-}
-
-// The package of a class or a module, by its id of the form `{pkg}-{name}`,
-// as "blockr.core" for "blockr.core-file_storage_plugin".
-// A package's name holds no "-", so the package is all that comes before the
-// first.
-export function packageFromId(id: string): string {
-  const at = id.indexOf("-");
-  return at < 0 ? id : id.slice(0, at);
 }
 
 // The controls of a list that the bar draws: the first of those that share an

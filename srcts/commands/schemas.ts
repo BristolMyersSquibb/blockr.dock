@@ -89,7 +89,10 @@ export const before: JsonSchema = {
   anyOf: [object({ view }, ["view"]), object({ folder }, ["folder"])],
 };
 
-export const panel: JsonSchema = ref("Panel", 'A panel, as a grid names it: { "block": id } for a block\'s card, or { "plugin": id } for the UI of a plugin, by the id of its class.');
+export const panel: JsonSchema = ref(
+  "Panel",
+  'A panel, as a grid names it: { "block": id } for a block\'s card, or { "plugin": { "package": package, "id": id } } for the UI of a plugin, by the package and the id of its class.',
+);
 
 export function near(what: string): JsonSchema {
   return ref(

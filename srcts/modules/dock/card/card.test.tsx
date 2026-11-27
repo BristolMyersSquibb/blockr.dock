@@ -4,19 +4,19 @@
 // as core's does, and that of every other class draws a line.
 
 import type { BlockId, JsonBoard } from "@blockr/core";
-import { HELLO, stubCore } from "@blockr/core/stubs";
+import { HELLO, id, stubCore } from "@blockr/core/stubs";
 import type { StubCoreOptions } from "@blockr/core/stubs";
 import { act } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import type { DockState } from "../../../state/index.ts";
-import { DOCK, hello, modules, pressOn, typeInto, typeSearch, waitFor } from "../testing.ts";
+import { DOCK, hello, modules, offered, pressOn, typeInto, typeSearch, waitFor } from "../testing.ts";
 import { matches } from "../picker.tsx";
 import { menuSpot, tooltipSpot } from "../place.ts";
 import { classGroups } from "./classes.tsx";
 
 // The dock's state with one view, which shows Iris (a), Head (b), in front of
 // Merge (c), and Bind (e) side by side, with the Edit board plugin on the
-// left rail.
+// left rail, which the state names by the package and the id of its class.
 const shown: DockState = {
   views: {
     main: {
@@ -33,8 +33,8 @@ const shown: DockState = {
         sizes: [0.25, 0.25, 0.5],
         rails: {
           left: {
-            panels: [{ plugin: "blockr.core-edit_board_plugin" }],
-            active: { plugin: "blockr.core-edit_board_plugin" },
+            panels: [{ plugin: { package: "blockr.core", id: "edit_board_plugin" } }],
+            active: { plugin: { package: "blockr.core", id: "edit_board_plugin" } },
             collapsed: false,
             size: 260,
           },
@@ -59,7 +59,7 @@ function boardWith(state: DockState, locked: Readonly<Record<BlockId, boolean | 
       blocks: Object.fromEntries(
         Object.entries(board.blocks).map(([id, block]) => [id, { ...block, locked: locked[id] ?? block.locked }]),
       ),
-      plugins: { [DOCK]: { state, version: 1 } },
+      plugins: { [DOCK.package]: { [DOCK.id]: { state, version: 1 } } },
     },
   };
 }
@@ -84,6 +84,7 @@ async function startCards(board: JsonBoard = boardWith(shown), lock = false, pla
       ...(played.registry === undefined ? {} : { block_registry: played.registry }),
     },
     modules,
+    offered,
     ...(played.evaluate === undefined ? {} : { evaluate: played.evaluate }),
     el,
   });
@@ -207,8 +208,8 @@ const clickOn = (target: Element) => {
   });
 };
 
-const visibleOf = (core: { store: { board(): { plugins: Readonly<Record<string, unknown>> } } }) =>
-  (core.store.board().plugins[DOCK] as DockState).visible;
+const visibleOf = (core: { store: { board(): { plugins: Readonly<Record<string, Readonly<Record<string, unknown>>>> } } }) =>
+  (core.store.board().plugins[DOCK.package]?.[DOCK.id] as DockState).visible;
 
 describe("a block's card", () => {
   test("draws the block's mark, with its class and package, its name and its tools", async () => {
@@ -232,7 +233,7 @@ describe("a block's card", () => {
     expect(ui?.textContent).toBe("The block's controls");
     expect(sectionOf(card, "outputs")?.querySelector('[role="region"][aria-label="Output"]')).not.toBeNull();
 
-    await act(() => core.commands.run("blockr.core-remove_block", { id: "b" }));
+    await act(() => core.commands.run(id("blockr.core", "remove_block"), { id: "b" }));
     await settled();
     expect(el.querySelector('.blockr-card[aria-label="Head"]')).toBeNull();
     expect(ui?.childNodes).toHaveLength(0);
@@ -242,7 +243,7 @@ describe("a block's card", () => {
     const { core, el, settled } = await startCards();
 
     const ui = cardOf(el, "Head").querySelector('[aria-label="Inputs"]');
-    await act(() => core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "c" } }));
+    await act(() => core.commands.run(id("blockr.dock", "activate_panel"), { view: "main", panel: { block: "c" } }));
     await settled();
     expect(cardOf(el, "Merge")).toBeDefined();
     expect(ui?.textContent).toBe("The block's controls");
@@ -271,7 +272,7 @@ describe("a block's card", () => {
     expect(sectionOf(iris, "outputs")?.hidden).toBe(false);
   });
 
-  test("sets the sections with blockr.dock-set_sections as a toggle is clicked, as one undo step", async () => {
+  test("sets the sections with set_sections as a toggle is clicked, as one undo step", async () => {
     const { core, el, settled } = await startCards();
 
     const card = cardOf(el, "Head");
@@ -343,7 +344,7 @@ describe("a block's card", () => {
     expect(outputs.hasAttribute("data-folding")).toBe(false);
   });
 
-  test("shows the padlock closed while the block follows the board lock, and opens it with blockr.core-change_block", async () => {
+  test("shows the padlock closed while the block follows the board lock, and opens it with change_block", async () => {
     const { core, el, settled } = await startCards();
 
     const card = cardOf(el, "Head");
@@ -429,7 +430,7 @@ describe("a block's card", () => {
     const { core, el, settled } = await startCards();
 
     expect(cardOf(el, "Head").hasAttribute("data-compact")).toBe(false);
-    await act(() => core.commands.run("blockr.core-set_option", { id: "compact", value: true }));
+    await act(() => core.commands.run(id("blockr.core", "set_option"), { id: "compact", value: true }));
     await settled();
     expect(cardOf(el, "Head").hasAttribute("data-compact")).toBe(true);
   });
@@ -479,7 +480,7 @@ describe("a block's status on its card", () => {
   test("fades the output of a stale block, until the block is ready again", async () => {
     const { core, el, settled } = await startCards();
     const show = async (block: BlockId) => {
-      await act(() => core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block } }));
+      await act(() => core.commands.run(id("blockr.dock", "activate_panel"), { view: "main", panel: { block } }));
       await settled();
     };
 
@@ -544,14 +545,13 @@ describe("a block's status on its card", () => {
 
   test("keeps the output of a ready block whose output R could not make, while the dot reads failed", async () => {
     // R has no output to give for Head, whose renderer has no fixtures.
-    const entry = hello.block_registry["blockr.core-head_block"];
+    const entry = hello.block_registry.find((each) => each.package === "blockr.core" && each.id === "head_block");
     const renderer = entry?.renderers?.[0];
     if (entry === undefined || renderer === undefined) throw new Error("The fixture has no head block with a renderer.");
     const { el } = await startCards(boardWith(shown), false, {
-      registry: {
-        ...hello.block_registry,
-        "blockr.core-head_block": { ...entry, renderers: [{ ...renderer, id: "blockr.dock-no_fixtures" }] },
-      },
+      registry: hello.block_registry.map((each) =>
+        each === entry ? { ...entry, renderers: [{ ...renderer, package: "blockr.dock", id: "no_fixtures" }] } : each,
+      ),
     });
 
     const head = cardOf(el, "Head");
@@ -607,7 +607,7 @@ describe("the notifications on a block's card", () => {
     const { core, el, settled } = await startCards();
 
     const withdraw = await act(() =>
-      core.notifications.notify("blockr.core-edit_board_plugin", {
+      core.notifications.notify(id("blockr.core", "edit_board_plugin"), {
         severity: "error",
         message: "The edit was refused.",
         code: "edit_refused",
@@ -781,8 +781,8 @@ describe("a block's menu", () => {
     await settled();
 
     const board = core.store.board();
-    const added = Object.keys(board.blocks).filter((id) => !before.includes(id));
-    expect(added.map((id) => board.blocks[id]?.registry_id)).toEqual(["blockr.core-scatter_block"]);
+    const added = Object.keys(board.blocks).filter((block) => !before.includes(block));
+    expect(added.map((block) => board.blocks[block]?.registry_id)).toEqual([id("blockr.core", "scatter_block")]);
     expect(Object.values(board.links)).toContainEqual({ from: "b", to: added[0], input: "data" });
 
     act(() => {
@@ -899,7 +899,7 @@ describe("focus", () => {
     const { core, el } = await startCards();
 
     pointer(cardOf(el, "Head"), "pointerdown");
-    const panel = el.querySelector('.blockr-dock-panel[data-plugin="blockr.core-edit_board_plugin"]');
+    const panel = el.querySelector('.blockr-dock-panel[data-plugin="edit_board_plugin of blockr.core"]');
     const tab = [...el.querySelectorAll(".dv-default-tab")].find((each) => each.textContent.trim() === "Edit board");
     if (panel === null || tab === undefined) throw new Error("Edit board shows no panel.");
     pointer(panel, "pointerdown");
@@ -1028,11 +1028,11 @@ describe("the placement of a menu and of a tooltip", () => {
 });
 
 describe("the + menu's classes", () => {
-  const entries = Object.values(HELLO.block_registry);
+  const entries = HELLO.block_registry;
   const pick = () => undefined;
 
   test("come by category, then by name, with the classes of no category last", () => {
-    const thing = { ...entries[0], id: "blockr.test-thing_block", name: "a thing", category: "" } as (typeof entries)[0];
+    const thing = { ...entries[0], package: "blockr.test", id: "thing_block", name: "a thing", category: "" } as (typeof entries)[0];
     const groups = classGroups([...entries, thing], pick);
     expect(groups.map((group) => group.title)).toEqual(["input", "plot", "transform", "uncategorized"]);
     expect(groups.find((group) => group.title === "transform")?.rows.map((row) => row.label)).toEqual([
@@ -1044,11 +1044,11 @@ describe("the + menu's classes", () => {
     expect(groups.find((group) => group.title === "uncategorized")?.rows.map((row) => row.badge)).toEqual(["blockr.test"]);
   });
 
-  test("are those whose name, id, category or keywords hold every word searched", () => {
+  test("are those whose name, id and package, category or keywords hold every word searched, each keyed by its id and package", () => {
     const found = (searched: string) =>
       classGroups(entries, pick).flatMap((group) => group.rows.filter((row) => matches(row, searched)).map((row) => row.key));
-    expect(found("Block MERGE")).toEqual(["blockr.core-merge_block"]);
-    expect(found("plot")).toEqual(["blockr.core-scatter_block"]);
+    expect(found("Block MERGE")).toEqual(["merge_block of blockr.core"]);
+    expect(found("plot")).toEqual(["scatter_block of blockr.core"]);
     expect(found("nothing like it")).toEqual([]);
   });
 });

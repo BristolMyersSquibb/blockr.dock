@@ -11,7 +11,7 @@
 // the page, and warns of no update outside act().
 
 import type { Json, JsonBoard } from "@blockr/core";
-import { HELLO, stubCore } from "@blockr/core/stubs";
+import { HELLO, id, stubCore } from "@blockr/core/stubs";
 import { press, type } from "@blockr/ui/stubs";
 import { act } from "react";
 import * as compactOption from "../compact-option/index.ts";
@@ -19,7 +19,8 @@ import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
 
-export const DOCK = "blockr.dock-dock_plugin";
+// The Id of the dock plugin's class, as core gives it to the dock.
+export const DOCK = id("blockr.dock", "dock_plugin");
 
 // Presses a key on the element, as blockr.ui's press() does, in an event that
 // a handler can take, as a browser's is, and says whether one took it.
@@ -111,8 +112,9 @@ for (const method of ["showPopover", "hidePopover"]) {
 
 // R's reply to hello in an app that runs the dock in place of core's basic
 // frontend, beside core's other plugins.
-// The entry of the dock plugin's class gives the class's version, 1, the
-// board options that the dock reads and where R serves the class's module.
+// The entry of the dock plugin's class gives the class's package and id, its
+// version, 1, the board options that the dock reads and where R serves the
+// class's module.
 // It names the board options as the method of R's plugin_options() for the
 // class does.
 // The reply also says where R serves the modules of the dock's board options,
@@ -120,17 +122,17 @@ for (const method of ["showPopover", "hidePopover"]) {
 export const hello = {
   ...HELLO,
   packages: { ...HELLO.packages, "blockr.dock": "0.2.1" },
-  plugins: {
-    ...Object.fromEntries(
-      Object.entries(HELLO.plugins).filter(([id]) => id !== "blockr.core-basic_frontend_plugin"),
-    ),
-    [DOCK]: {
+  plugins: [
+    ...HELLO.plugins.filter((entry) => entry.package !== "blockr.core" || entry.id !== "basic_frontend_plugin"),
+    {
+      package: DOCK.package,
+      id: DOCK.id,
       name: "Dock",
       version: 1,
       options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
       module: "blockr.dock/js/dock.js",
     },
-  },
+  ],
   options: {
     ...HELLO.options,
     compact: { package: "blockr.dock", module: "blockr.dock/compact-option.js", version: 1 },
@@ -160,26 +162,30 @@ const drawsNothing = { api: 1, default: { render: () => undefined } };
 // other class draws a line, and each renderer of a class's outputs draws
 // nothing.
 export const blockModules: Readonly<Record<string, unknown>> = Object.fromEntries(
-  Object.values(HELLO.block_registry).flatMap((entry): [string, unknown][] => [
-    [entry.module, entry.id === "blockr.core-rbind_block" ? drawsNothing : drawsLine],
+  HELLO.block_registry.flatMap((entry): [string, unknown][] => [
+    [entry.module, entry.package === "blockr.core" && entry.id === "rbind_block" ? drawsNothing : drawsLine],
     ...(entry.renderers ?? []).map((renderer): [string, unknown] => [renderer.module, drawsNothing]),
   ]),
 );
 
-// What each module of the dock exports, by the id that R's reply names it
-// under, and the stand-ins for core's block classes.
+// What each module of the dock's board options exports, by the id of the
+// board option that R's reply names it under, and the stand-ins for core's
+// block classes, by the URLs that R serves them at.
 export const modules = {
   ...blockModules,
-  [DOCK]: dock,
   compact: compactOption,
   view_tabs: viewTabsOption,
   sync_rails: syncRailsOption,
 };
+
+// The module of the dock plugin's class, by the package and the id of the
+// class, as R's reply names it.
+export const offered = { [DOCK.package]: { [DOCK.id]: dock } };
 
 // Starts core with the dock's modules, with the values of blockr options that
 // R holds, none unless given, where the frontend of the dock plugin's class
 // draws the page in `el` where a test gives one, on the board that R's reply
 // to hello gives, the fixture's unless one is given.
 export function startDock(el?: HTMLElement, blockrOptions: Readonly<Record<string, Json>> = {}, board?: JsonBoard) {
-  return stubCore({ hello: board === undefined ? hello : { ...hello, board }, modules, blockrOptions, el });
+  return stubCore({ hello: board === undefined ? hello : { ...hello, board }, modules, offered, blockrOptions, el });
 }

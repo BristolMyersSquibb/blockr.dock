@@ -9,7 +9,7 @@
 // - The logo, which turns while R evaluates a block that the dock demands
 //   (./busy.ts). Its tooltip says "Computing" while it turns.
 // - The board's name. A click turns it into a field, which runs core's
-//   command blockr.core-change_board with the name that the user gives. Enter
+//   command change_board with the name that the user gives. Enter
 //   and leaving the field rename the board, unless the name is empty or
 //   unchanged, and Escape gives up. Under the board lock, the name only shows.
 // - The storage plugin's controls, those that no storage item places apart
@@ -40,7 +40,8 @@
 //   place, or nothing where the plugin gives no control of that id.
 // - A link opens in a new tab, and a menu holds links and further menus
 //   (./menu.tsx).
-// - A module item loads the module that a package offers by its id, with
+// - A module item loads the module that a package offers by its id, which it
+//   makes of the item's record of a package and an id with core.id(), with
 //   core's module(). The module meets the contract of a UI module, with
 //   CoreApi in place of a host: it declares the major of core's JS API that it
 //   was built against, as `export const api = 1`, and its default export has a
@@ -60,7 +61,7 @@ import { useBoard } from "@blockr/core/react";
 import { Button } from "@blockr/ui";
 import { useCallback, useEffect, useReducer, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, ReactElement } from "react";
-import { isObject } from "../../state/index.ts";
+import { idText, isObject } from "../../state/index.ts";
 import { API } from "./api.ts";
 import { withAttributes } from "./attributes.tsx";
 import type { Busy } from "./busy.ts";
@@ -212,7 +213,7 @@ function BoardName(): ReactElement {
         className="blockr-dock-bar-field"
         onSubmit={(name) => {
           // Core tells the user why the store refused the name.
-          core.commands.run("blockr.core-change_board", { name }).catch(() => undefined);
+          core.commands.run(core.id("blockr.core", "change_board"), { name }).catch(() => undefined);
         }}
         onDone={() => {
           setRenaming(false);
@@ -443,7 +444,7 @@ function ModuleSlot({ item }: { readonly item: ModuleItem }): ReactElement {
     const gone = () => signal.aborted;
     let cleanup: (() => void) | undefined;
     const draw = async () => {
-      const mod = navbarModule(await core.module(item.module));
+      const mod = navbarModule(await core.module(core.id(item.module.package, item.module.id)));
       if (gone()) return;
       const done = await mod.render({ el, core, signal });
       if (gone()) done?.();
@@ -451,7 +452,7 @@ function ModuleSlot({ item }: { readonly item: ModuleItem }): ReactElement {
     };
     draw().catch((error: unknown) => {
       if (gone()) return;
-      const message = `The module ${item.module} of the navbar item "${item.id}" cannot draw: ${errorMessage(error)}`;
+      const message = `The navbar item "${item.id}" cannot draw its module ${idText(item.module)}: ${errorMessage(error)}`;
       core.log("blockr.dock").error(new Error(message, { cause: error }));
       setFailure(message);
     });
@@ -466,7 +467,7 @@ function ModuleSlot({ item }: { readonly item: ModuleItem }): ReactElement {
   }, [core, item.id, item.module]);
 
   if (failure !== undefined) return <Warning message={failure} />;
-  return <span ref={ref} className="blockr-dock-bar-module" data-module={item.module} />;
+  return <span ref={ref} className="blockr-dock-bar-module" data-module={idText(item.module)} />;
 }
 
 // What a module on the bar exports as its default.

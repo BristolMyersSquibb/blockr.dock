@@ -1,7 +1,8 @@
 // The toasts of the dock, followed from notifications and a board that the
 // test sets, as CoreApi would hold them, with the browser's timers faked.
 
-import type { Board, BoardObject, CoreApi, Notification, NotificationSource } from "@blockr/core";
+import type { Board, BoardObject, CoreApi, Notification, NotificationSource, PluginClassId } from "@blockr/core";
+import { id } from "@blockr/core/stubs";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { DOCK } from "../../commands/index.ts";
 import type { DockState, Grid, Panel } from "../../state/index.ts";
@@ -54,9 +55,12 @@ function storing(initial: Board) {
   };
 }
 
-// The id of the class of core's Edit board plugin, whose panel the dock draws.
-const EDIT_PLUGIN = "blockr.core-edit_board_plugin";
-const drawn = new Map([[EDIT_PLUGIN, "Edit board"]]);
+// The id of the class of core's Edit board plugin, whose panel the dock draws,
+// as core gives it, and the panel as the dock's state names it, by a record of
+// the same package and id, which is no object of core's.
+const EDIT_PLUGIN = id("blockr.core", "edit_board_plugin");
+const EDIT_PANEL: Panel = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
+const drawn: ReadonlyMap<PluginClassId, string> = new Map([[EDIT_PLUGIN, "Edit board"]]);
 
 // Core's Edit board plugin, as the source of what it raises.
 const EDIT: NotificationSource = {
@@ -86,7 +90,7 @@ function boardWith(views: Readonly<Record<string, Grid>>, active: string | null)
 
 // A board that holds the dock state given.
 function dockBoard(state: DockState): Board {
-  return { id: "board", name: "Board", blocks: {}, links: {}, stacks: {}, options: {}, plugins: { [DOCK]: state } };
+  return { id: "board", name: "Board", blocks: {}, links: {}, stacks: {}, options: {}, plugins: { [DOCK.package]: { [DOCK.id]: state } } };
 }
 
 // A board whose one view, main, shows a's panel alone.
@@ -135,7 +139,7 @@ describe("the toasts", () => {
     };
     const renderer: NotificationSource = {
       kind: "module",
-      module: { object: { block: "b" }, renderer: "blockr.core-basic_table", package: "blockr.core" },
+      module: { object: { block: "b" }, renderer: id("blockr.core", "basic_table"), package: "blockr.core" },
       code: "render_failed",
     };
     const given = holding([
@@ -287,17 +291,17 @@ describe("the toast of a notification about a plugin whose panel the dock draws"
 
   test("shows while the active view holds no panel of the plugin, goes once it holds one, and comes back once it holds none again", () => {
     const given = holding([raised("e", "error", edit), raised("m", "message", edit)]);
-    const board = storing(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "main"));
+    const board = storing(boardWith({ main: groupGrid(), side: groupGrid(EDIT_PANEL) }, "main"));
     const toasts = createTestToasts(given.notifications, board.store);
     expect(ids(toasts)).toEqual(["e", "m"]);
 
     vi.advanceTimersByTime(SHOWN_FOR - 1000);
-    board.set(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "side"));
+    board.set(boardWith({ main: groupGrid(), side: groupGrid(EDIT_PANEL) }, "side"));
     expect(ids(toasts)).toEqual([]);
     expect(vi.getTimerCount()).toBe(0);
 
     // The message's toast counts its five seconds anew.
-    board.set(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "main"));
+    board.set(boardWith({ main: groupGrid(), side: groupGrid(EDIT_PANEL) }, "main"));
     expect(ids(toasts)).toEqual(["e", "m"]);
     vi.advanceTimersByTime(SHOWN_FOR - 1);
     expect(ids(toasts)).toEqual(["e", "m"]);
@@ -311,60 +315,59 @@ describe("the toast of a notification about a plugin whose panel the dock draws"
     const toasts = createTestToasts(given.notifications, board.store);
     expect(ids(toasts)).toEqual(["e"]);
 
-    board.set(boardWith({ main: groupGrid(edit) }, "main"));
+    board.set(boardWith({ main: groupGrid(EDIT_PANEL) }, "main"));
     expect(ids(toasts)).toEqual([]);
   });
 
   test("does not come back once the user closed it or it faded, while its notification holds", () => {
     const given = holding([raised("e", "error", edit), raised("m", "message", edit)]);
-    const board = storing(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "main"));
+    const board = storing(boardWith({ main: groupGrid(), side: groupGrid(EDIT_PANEL) }, "main"));
     const toasts = createTestToasts(given.notifications, board.store);
 
     toasts.close("e");
     vi.advanceTimersByTime(SHOWN_FOR + FADES_FOR);
     expect(ids(toasts)).toEqual([]);
-    board.set(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "side"));
-    board.set(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "main"));
+    board.set(boardWith({ main: groupGrid(), side: groupGrid(EDIT_PANEL) }, "side"));
+    board.set(boardWith({ main: groupGrid(), side: groupGrid(EDIT_PANEL) }, "main"));
     expect(ids(toasts)).toEqual([]);
   });
 
   test("shows whatever the active view holds where the plugin's class has no `ui`, so that the dock draws no panel for it", () => {
-    const storage = { plugin: "blockr.core-file_storage_plugin" };
+    const storage = { plugin: id("blockr.core", "file_storage_plugin") };
     const given = holding([raised("e", "error", storage)]);
-    const board = storing(boardWith({ main: groupGrid(storage) }, "main"));
+    const board = storing(boardWith({ main: groupGrid({ plugin: { package: "blockr.core", id: "file_storage_plugin" } }) }, "main"));
     const toasts = createTestToasts(given.notifications, board.store);
     expect(ids(toasts)).toEqual(["e"]);
   });
 });
 
 describe("the link of a toast that shows a plugin's panel", () => {
-  const edit = { plugin: EDIT_PLUGIN };
-  const show = { id: "blockr.dock-show_panel", args: { panel: edit } };
-  const passes = { preflight: () => true };
-  const fails = { preflight: () => false };
+  const show = { id: id("blockr.dock", "show_panel"), args: { panel: { plugin: EDIT_PLUGIN } } };
+  const passes = { id, commands: { preflight: () => true } };
+  const fails = { id, commands: { preflight: () => false } };
 
   test("makes the first view of the navigation that holds the panel the active one, and shows the panel there", () => {
     // The navigation lists main, then the folder f, which holds the view
     // inner, then the view last, and both inner and last hold the panel.
     const board = dockBoard({
       views: {
-        last: { name: "Last", folder: null, index: "a2", grid: groupGrid(edit) },
-        inner: { name: "Inner", folder: "f", index: "a0", grid: groupGrid(edit) },
+        last: { name: "Last", folder: null, index: "a2", grid: groupGrid(EDIT_PANEL) },
+        inner: { name: "Inner", folder: "f", index: "a0", grid: groupGrid(EDIT_PANEL) },
         main: { name: "Main", folder: null, index: "a0", grid: groupGrid() },
       },
       folders: { f: { name: "F", folder: null, index: "a1" } },
       active: "main",
       visible: {},
     });
-    expect(panelShowing(board, EDIT_PLUGIN, fails)).toEqual([{ id: "blockr.dock-activate_view", args: { view: "inner" } }, show]);
+    expect(panelShowing(board, EDIT_PLUGIN, fails)).toEqual([{ id: id("blockr.dock", "activate_view"), args: { view: "inner" } }, show]);
   });
 
   test("only shows the panel where the active view is the first that holds it", () => {
-    const board = boardWith({ main: groupGrid(edit), side: groupGrid(edit) }, "main");
+    const board = boardWith({ main: groupGrid(EDIT_PANEL), side: groupGrid(EDIT_PANEL) }, "main");
     expect(panelShowing(board, EDIT_PLUGIN, fails)).toEqual([show]);
   });
 
-  test("shows the panel in the active view where no view holds it, where blockr.dock-show_panel passes its preflight, and is none otherwise", () => {
+  test("shows the panel in the active view where no view holds it, where show_panel passes its preflight, and is none otherwise", () => {
     const board = boardWith({ main: groupGrid(), side: groupGrid() }, "side");
     expect(panelShowing(board, EDIT_PLUGIN, passes)).toEqual([show]);
     // As on a locked board, which adds no panel.
@@ -381,8 +384,8 @@ describe("what a toast names", () => {
     id: "board",
     name: "Iris review",
     blocks: {
-      a: { registry_id: "blockr.core-dataset_block", state: {}, name: "Iris", locked: null },
-      b: { registry_id: "blockr.core-head_block", state: {}, name: "Head", locked: null },
+      a: { registry_id: id("blockr.core", "dataset_block"), state: {}, name: "Iris", locked: null },
+      b: { registry_id: id("blockr.core", "head_block"), state: {}, name: "Head", locked: null },
     },
     links: { ab: { from: "a", to: "b", input: "data" } },
     stacks: { s: { name: "Inputs", blocks: ["a"], color: null } },
@@ -393,7 +396,7 @@ describe("what a toast names", () => {
     options: {
       registered: () => ({ n_rows: { label: "Rows shown" } }) as unknown as ReturnType<CoreApi["options"]["registered"]>,
     },
-    plugins: { appPlugins: () => ({ "blockr.core-edit_board_plugin": { name: "Edit board" } }) },
+    plugins: { appPlugins: () => new Map([[EDIT_PLUGIN, { name: "Edit board" }]]) },
   };
 
   test("is the board object that the notification concerns, by the name the page shows for it, by its id where core no longer knows it, or the board", () => {
@@ -402,8 +405,8 @@ describe("what a toast names", () => {
         undefined,
         { option: "n_rows" },
         { option: "zoom" },
-        { plugin: "blockr.core-edit_board_plugin" },
-        { plugin: "blockr.gone-gone_plugin" },
+        { plugin: EDIT_PLUGIN },
+        { plugin: id("blockr.gone", "gone_plugin") },
         { stack: "s" },
         { stack: "gone" },
         { link: "ab" },
@@ -416,7 +419,7 @@ describe("what a toast names", () => {
       'Board option "Rows shown"',
       'Board option "zoom"',
       'Plugin "Edit board"',
-      'Plugin "blockr.gone-gone_plugin"',
+      'Plugin "gone_plugin of blockr.gone"',
       'Stack "Inputs"',
       'Stack "gone"',
       'Link from "Iris" to "Head"',
@@ -431,8 +434,8 @@ describe("what a toast names", () => {
       id: "failed",
       severity: "error",
       message: "No module.",
-      source: { kind: "core", code: "module_failed", module: { object: { plugin: "blockr.core-edit_board_plugin" }, package: "blockr.core" } },
-      about: { plugin: "blockr.core-edit_board_plugin" },
+      source: { kind: "core", code: "module_failed", module: { object: { plugin: EDIT_PLUGIN }, package: "blockr.core" } },
+      about: { plugin: EDIT_PLUGIN },
     };
     const replied: Notification = {
       id: "replied",
@@ -442,9 +445,9 @@ describe("what a toast names", () => {
         kind: "r",
         class: ["simpleError", "error", "condition"],
         request: { type: "plugin", name: "layout" },
-        module: { object: { plugin: "blockr.core-edit_board_plugin" }, package: "blockr.core" },
+        module: { object: { plugin: EDIT_PLUGIN }, package: "blockr.core" },
       },
-      about: { plugin: "blockr.core-edit_board_plugin" },
+      about: { plugin: EDIT_PLUGIN },
     };
     // What the store dropped as the board opened, which no module is behind.
     const dropped: Notification = {

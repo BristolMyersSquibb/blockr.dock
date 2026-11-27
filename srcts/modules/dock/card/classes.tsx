@@ -8,14 +8,17 @@
 // takes the other's result.
 // The categories come by name, but for the classes without one, which come
 // last, and the classes by name within each, as core's picker orders them.
-// The search finds a class by its name, its id, its category and its
-// keywords.
+// The search finds a class by its name, its id and package, its category and
+// its keywords.
+// A row's key names the class's package beside its id, since two packages may
+// give classes of one id.
 // The design system's tool "Open in the sidebar" is left out, since the dock
 // has no block browser for it to open.
 
 import type { RegistryEntry } from "@blockr/core";
+import { idText } from "../../../state/index.ts";
 import type { PickerGroup } from "../picker.tsx";
-import { categoryOf, Mark, packageOf } from "./mark.tsx";
+import { categoryOf, Mark } from "./mark.tsx";
 
 const UNCATEGORIZED = categoryOf(undefined);
 
@@ -35,13 +38,13 @@ export function classGroups(entries: readonly RegistryEntry[], pick: (entry: Reg
       rows: list
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((entry) => {
-          const pkg = packageOf(entry.id);
+          const pkg = entry.package;
           return {
-            key: entry.id,
+            key: idText(entry),
             label: entry.name,
             lead: <Mark entry={entry} size={24} />,
             ...(pkg === null ? {} : { badge: pkg }),
-            search: [entry.id, entry.category, ...entry.keywords].join(" "),
+            search: [idText(entry), entry.category, ...entry.keywords].join(" "),
             onPick: () => {
               pick(entry);
             },

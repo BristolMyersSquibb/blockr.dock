@@ -12,8 +12,9 @@
 // 3. Where the URL's query parameter `view` names one of the views by id, it
 //    makes that view active, while an id that names no view changes nothing.
 // It applies all of it as one delta with the origin of the dock plugin's
-// class and `undo: false`, so that undo never takes the user back to an
-// empty page or to a panel that the app cannot draw.
+// class, the Id that render() gets for it, and `undo: false`, so that undo
+// never takes the user back to an empty page or to a panel that the app
+// cannot draw.
 // The view has a fixed id, so that a fresh start of the same app on the same
 // board gives the same id, and a link with ?view=page reaches it.
 // The ids of the views that the dock adds through its commands are minted, but
@@ -21,7 +22,7 @@
 
 import type { Board, CoreApi, Patch, PluginClassId } from "@blockr/core";
 import { DOCK, dockState } from "../../commands/index.ts";
-import { gridPanels, mintKey, pointer, prunePanels, RAIL_SIZE } from "../../state/index.ts";
+import { gridPanels, mintKey, pointer, prunePanels, RAIL_SIZE, sameId } from "../../state/index.ts";
 import type { Grid, Panel, View, ViewId } from "../../state/index.ts";
 
 // The id and the name of the view that the dock adds to a state that holds
@@ -35,7 +36,7 @@ export const PAGE_NAME = "Page";
 export function startingPatches(board: Board, drawn: readonly PluginClassId[], view: string | undefined): Patch[] {
   const state = dockState(board);
   if (state === undefined) return [];
-  const at = (...segments: string[]) => pointer(["plugins", DOCK, ...segments]);
+  const at = (...segments: string[]) => pointer(["plugins", DOCK.package, DOCK.id, ...segments]);
   const patches: Patch[] = [];
 
   const added = Object.keys(state.views).length === 0;
@@ -46,7 +47,9 @@ export function startingPatches(board: Board, drawn: readonly PluginClassId[], v
     views = { [PAGE_ID]: page };
   }
 
-  const draws = (panel: Panel) => "block" in panel || drawn.includes(panel.plugin);
+  // The state names a plugin's class by a record of its package and its id,
+  // which is no object of core's, so the step compares the two.
+  const draws = (panel: Panel) => "block" in panel || drawn.some((plugin) => sameId(plugin, panel.plugin));
   for (const [id, held] of Object.entries(state.views)) {
     if (gridPanels(held.grid).every(draws)) continue;
     patches.push({ op: "replace", path: at("views", id, "grid"), value: prunePanels(held.grid, draws) });
@@ -59,6 +62,8 @@ export function startingPatches(board: Board, drawn: readonly PluginClassId[], v
 }
 
 // The grid of the view that the dock adds to a state that holds none.
+// It names each plugin by the Id of its class, which the state holds as the
+// record that the Id serializes as.
 function startingGrid(board: Board, drawn: readonly PluginClassId[]): Grid {
   const blocks: Panel[] = Object.keys(board.blocks).map((block) => ({ block }));
   const plugins: Panel[] = drawn.map((plugin) => ({ plugin }));
@@ -79,7 +84,7 @@ function startingGrid(board: Board, drawn: readonly PluginClassId[]): Grid {
 export function drawnPlugins(core: Pick<CoreApi, "plugins">): ReadonlyMap<PluginClassId, string> {
   const plugins = core.plugins.appPlugins();
   return new Map(
-    Object.entries(plugins).flatMap(([id, plugin]) => (core.plugins.pluginClass(id).ui === undefined ? [] : [[id, plugin.name] as const])),
+    [...plugins].flatMap(([id, plugin]) => (core.plugins.pluginClass(id).ui === undefined ? [] : [[id, plugin.name] as const])),
   );
 }
 

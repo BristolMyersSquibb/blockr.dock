@@ -10,10 +10,14 @@
 import type { Edge, Panel } from "../state/index.ts";
 
 // The dockview id of a panel.
-// It holds the block's id or the plugin class's id alone, in that one key, so
-// that two values that name the same panel give the same id.
+// It holds the block's id alone, or the package and the id of the plugin's
+// class alone, in that order, as
+// {"plugin":{"package":"blockr.core","id":"edit_board_plugin"}}, so that two
+// values that name the same panel give the same id.
 export function panelId(panel: Panel): string {
-  return "block" in panel ? JSON.stringify({ block: panel.block }) : JSON.stringify({ plugin: panel.plugin });
+  return "block" in panel
+    ? JSON.stringify({ block: panel.block })
+    : JSON.stringify({ plugin: { package: panel.plugin.package, id: panel.plugin.id } });
 }
 
 // The panel that a dockview id names, or undefined where the id names none, as
@@ -30,8 +34,9 @@ export function panelFromId(id: string): Panel | undefined {
   if (keys.length !== 1) return undefined;
   const { block, plugin } = value as { block?: unknown; plugin?: unknown };
   if (typeof block === "string") return { block };
-  if (typeof plugin === "string") return { plugin };
-  return undefined;
+  if (typeof plugin !== "object" || plugin === null || Array.isArray(plugin) || Object.keys(plugin).length !== 2) return undefined;
+  const { package: pkg, id: cls } = plugin as { package?: unknown; id?: unknown };
+  return typeof pkg === "string" && typeof cls === "string" ? { plugin: { package: pkg, id: cls } } : undefined;
 }
 
 // The dockview id of the group of the rail on an edge.

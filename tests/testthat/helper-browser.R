@@ -83,7 +83,7 @@ app_board <- function(app) {
 
 # The dock's state on the board that the client holds.
 app_dock <- function(app) {
-  app_board(app)[["plugins"]][["blockr.dock-dock_plugin"]]
+  app_board(app)[["plugins"]][["blockr.dock"]][["dock_plugin"]]
 }
 
 # The grid of the view given, from the dock's state.
@@ -128,12 +128,13 @@ tab_groups <- function(node) {
   do.call(c, lapply(node[["children"]], tab_groups))
 }
 
-# What each panel of a tab group or rail shows: the id of its block, or that
-# of its plugin's class.
+# What each panel of a tab group or rail shows: the id of its block, or its
+# plugin's class as core's messages name an id, as
+# `edit_board_plugin of blockr.core`.
 group_panels <- function(group) {
   chr_ply(
     group[["panels"]],
-    function(panel) coal(panel[["block"]], panel[["plugin"]])
+    function(panel) coal(panel[["block"]], id_label(panel[["plugin"]]))
   )
 }
 
@@ -173,7 +174,7 @@ wait_for_grid <- function(app, view, check, what) {
         app$get_js(
           paste0(
             "JSON.stringify(blockrTest.board().plugins",
-            "['blockr.dock-dock_plugin'].views['", view, "'].grid)"
+            "['blockr.dock'].dock_plugin.views['", view, "'].grid)"
           )
         )
       )

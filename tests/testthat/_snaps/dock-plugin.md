@@ -3,7 +3,7 @@
     Code
       print(dock)
     Output
-      <dock_plugin> blockr.dock-dock_plugin (sections: i inputs, o outputs, n neither, unmarked both)
+      <dock_plugin> dock_plugin of blockr.dock (sections: i inputs, o outputs, n neither, unmarked both)
       ├─ main
       └─ <dock_folder> Safety
          ├─ ae (active)
@@ -23,7 +23,7 @@
     Code
       print(dock)
     Output
-      <dock_plugin> blockr.dock-dock_plugin (sections: i inputs, o outputs, n neither, unmarked both)
+      <dock_plugin> dock_plugin of blockr.dock (sections: i inputs, o outputs, n neither, unmarked both)
       └─ main (active)
       main<dock_view> Main
       └─ a, edit (plugin), b (active; o)
@@ -35,6 +35,6 @@
     Code
       print(new_dock_plugin(visible = list(a = "inputs")))
     Output
-      <dock_plugin> blockr.dock-dock_plugin (sections: i inputs, o outputs, n neither, unmarked both)
+      <dock_plugin> dock_plugin of blockr.dock (sections: i inputs, o outputs, n neither, unmarked both)
       cards in no view: a (i)
 

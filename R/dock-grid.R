@@ -46,8 +46,8 @@
 #' A grid names each panel by a panel reference, as [blk()] and [plg()] write
 #' them, or by a bare id, which names a block.
 #' It keeps each reference as written, and the dock turns the name of a plugin
-#' into the id of the plugin's class as [blockr.core::new_board()] builds the
-#' board (see [board_views()]).
+#' into the package and the id of the plugin's class as
+#' [blockr.core::new_board()] builds the board (see [board_views()]).
 #'
 #' The shares in `sizes` are positive numbers, which need not sum to 1, since
 #' the grid scales them to ratios that do.
@@ -82,7 +82,7 @@
 #' dock_grid("a", group("b", "c"), orientation = "vertical")
 #'
 #' # The block a, with core's Edit board plugin on a rail on the left edge
-#' dock_grid(blk("a"), rail(plg("blockr.core-edit_board_plugin")))
+#' dock_grid(blk("a"), rail(plg("edit_board_plugin", package = "blockr.core")))
 #'
 #' @return The function `dock_grid()` returns a `dock_grid`.
 #'   The function `panels()` returns a tab group, `group()` a split and
@@ -445,7 +445,7 @@ panels_placed_twice <- function(grid) {
 #' @export
 str_value.dock_grid <- function(x, ...) {
 
-  ids <- chr_xtr(grid_panels(x), "id")
+  ids <- chr_ply(grid_panels(x), id_label)
 
   if (!length(ids)) {
     return("<dock_grid> (empty)")
@@ -566,6 +566,8 @@ format_node <- function(node, orientation, visible) {
 # it is a plugin's panel, that it is the tab that its group shows, where the
 # group holds several, and after a semicolon, the sections that the card of a
 # block's panel shows, where the card hides one.
+# A panel goes by its block's id or its plugin's name, or by its plugin's
+# class as core's messages name an id, as `edit_board_plugin of blockr.core`.
 format_tabs <- function(node, visible) {
 
   refs <- node[["panels"]]
@@ -578,7 +580,7 @@ format_tabs <- function(node, visible) {
       kind <- ref_kind(ref)
 
       paste0(
-        ref[["id"]],
+        id_label(ref),
         grid_attrs(
           kind,
           if (several && identical(ref, node[["active"]])) "active",
@@ -628,7 +630,7 @@ format_tree <- function(items) {
   )
 }
 
-# How the tree marks the panel of a plugin, which it names by its id alone.
+# How the tree marks the panel of a plugin, which it names without `plg()`.
 ref_kind <- function(ref) {
   if (identical(ref[["type"]], "plugin")) "plugin"
 }

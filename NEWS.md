@@ -22,7 +22,7 @@
 * The dock describes its views and the active view to blockr.assistant's
   model, through a module named `assistant` (#687).
   The package offers the module in the `modules` of its `._BLOCKR_MODULES_`,
-  so that its id is `blockr.dock-assistant`.
+  so that its id is `assistant` within blockr.dock.
   As each call of the model goes out, the assistant calls the module's
   `describe()` with the dock's state.
   The lines that it returns name the active view.
@@ -144,9 +144,9 @@
 * The dock draws a card in each block's panel (#578).
   Its header holds the block's mark, its name, the Controls and Preview
   toggles, the padlock and the "…" button.
-  A double-click on the name renames the block, the toggles run
-  `blockr.dock-set_sections`, and the padlock sets the block's lock through
-  `blockr.core-change_block`.
+  A double-click on the name renames the block, the toggles run the dock's
+  command `set_sections`, and the padlock sets the block's lock through core's
+  `change_block`.
   The menu holds Rename, Append block, which opens the dock's "+" menu of block
   classes, Copy block ID and Remove block.
   Core mounts the block's UI and its output in the card's two sections, which
@@ -212,7 +212,7 @@
 
 * The dock carries out core's `show()`, through which a plugin shows a block
   or a plugin under every frontend (#599).
-  The dock's frontend runs `blockr.dock-show_panel` with what `show()` was
+  The dock's frontend runs its command `show_panel` with what `show()` was
   given.
   The command has the active view show the panel, and adds the panel at the
   default place where the view lacks it.
@@ -266,8 +266,8 @@
   After each gesture, the dock reads dockview's layout back into a grid, once,
   as the user lets go.
   Where only the shown tab or a rail's collapse changed, it runs
-  `blockr.dock-activate_panel` or `blockr.dock-collapse_rail`, and where
-  anything else changed, `blockr.dock-set_grid`.
+  `activate_panel` or `collapse_rail`, and where anything else changed,
+  `set_grid`.
   As the grid changes through an undo or another origin's command, dockview
   moves its panels, so that what core mounted in them stays mounted.
   In a window narrower than the blockr option `narrow_breakpoint`, the dock
@@ -282,9 +282,10 @@
   They place, move, remove, resize and show panels, set a view's grid,
   collapse or open a rail, and set the sections of a block's card.
   Each command returns one delta of patches inside the dock's state.
-  Each is one undo step, except `blockr.dock-activate_view`,
-  `blockr.dock-activate_panel`, `blockr.dock-show_panel` and
-  `blockr.dock-collapse_rail`.
+  Core registers them under blockr.dock, as
+  `core.id("blockr.dock", "add_view")` names one.
+  Each is one undo step, except `activate_view`, `activate_panel`,
+  `show_panel` and `collapse_rail`.
   On a locked board, a reader can still switch views, show another tab, and
   collapse or open a rail.
   No command adds, renames, moves or removes a view or folder there, or adds
@@ -314,7 +315,7 @@
   A grid, written with `dock_grid()`, `panels()`, `group()` and `rail()`,
   names a block's panel by the block's id or `blk()`, and a plugin's panel
   with `plg()`, by the name that the script gives the plugin in `plugins` or
-  by the id of the plugin's class.
+  by its class, as `plg("edit_board_plugin", package = "blockr.core")`.
   The constructor turns them into the state as the script runs.
   It draws each id that the script leaves out, names a view without a name
   after its id, writes each `index`, and makes the first view active where the
@@ -324,11 +325,11 @@
   It also refuses an `active` view or a `folder` that the script does not give,
   and a card section other than `"inputs"` and `"outputs"`.
   As `new_board()` builds the board, the dock's method of core's
-  `complete_plugin()` turns each name of a plugin in a grid into the id of the
-  plugin's class.
+  `complete_plugin()` turns each name of a plugin in a grid into the package
+  and the id of the plugin's class.
   It then refuses, naming each, a grid that places a panel twice, a `plg()`
-  that names neither a plugin of the board nor a plugin class, and a grid or
-  an entry of `visible` that names a block that the board lacks.
+  without a package that names no plugin of the board, and a grid or an entry
+  of `visible` that names a block that the board lacks.
   The argument `visible` takes the place of a block's `visible` attribute.
   The readers `board_views()`, `active_view()` and `view_name()` read the
   dock's state of a board.
@@ -355,7 +356,7 @@
   An item is one of the dock's own parts, from `default_navbar()`, a link from
   `navbar_link()`, a menu from `navbar_menu()`, one of the storage plugin's
   controls from `navbar_storage()`, or a module that a package offers, from
-  `navbar_item()`.
+  `navbar_item()`, by the module's id and the package that offers it.
   The argument `navbar` takes the items themselves.
   In blockr.dock 0.2.0, it took a function of the board and its plugins.
   The function `custom_navbar()` starts from the default items.
@@ -373,7 +374,7 @@
 * The dock has a client of its own, which draws the page as an empty dockview,
   in dockview's dark theme while the board option `dark_mode` is dark (#569).
   The constructor `new_dock_plugin()` makes the dock plugin, a frontend of the
-  plugin class `blockr.dock-dock_plugin`.
+  plugin class `dock_plugin` of blockr.dock.
   The package lists the class in `._BLOCKR_MODULES_`, so that `serve()` runs
   the dock in place of core's basic frontend wherever blockr.dock is available.
 

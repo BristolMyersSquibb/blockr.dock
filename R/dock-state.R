@@ -2,16 +2,16 @@
 # script runs, in the shape of the schema of the state, as the section
 # "Defining the state in R" of page 1.2.1 has it
 # (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.1).
-# The board holds it at /plugins/blockr.dock-dock_plugin, and core's
+# The board holds it at /plugins/blockr.dock/dock_plugin, and core's
 # `blockr_ser()` writes it by `js/dock.schema.json`.
 # A panel there is `list(block = "a")` or
-# `list(plugin = "blockr.core-edit_board_plugin")`.
+# `list(plugin = list(package = "blockr.core", id = "edit_board_plugin"))`.
 
 # The dock's state from `views`, `folders`, `active` and `visible`, as
 # `new_dock_plugin()` takes them.
 # A bare id in a grid names a block, and `plg()` names a plugin by the name
-# that the script gives it in the board's `plugins`, or by the id of its
-# class, so the state holds such a name until the dock completes it on the
+# that the script gives it in the board's `plugins`, or by its class's package
+# and id, so the state holds such a name until the dock completes it on the
 # board (see `complete_plugin.dock_plugin()`).
 # The state is an empty list where the script gives nothing, so that a board
 # holds no state for the dock.
@@ -304,13 +304,11 @@ check_holders <- function(view_holders, folder_holders) {
 # grid over the panels that it is given.
 view_grid_state <- function(view) {
 
-  resolve <- function(ref) state_panel(ref[["id"]], ref[["type"]])
-
   if (not_null(view[["grid"]])) {
-    return(grid_state(view[["grid"]], resolve))
+    return(grid_state(view[["grid"]], state_panel))
   }
 
-  default_grid(lapply(view[["panels"]], resolve))
+  default_grid(lapply(view[["panels"]], state_panel))
 }
 
 # A grid places each panel once, across its tab groups and its rails, so a

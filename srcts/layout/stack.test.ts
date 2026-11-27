@@ -7,9 +7,9 @@ import { stackGrid } from "./index.ts";
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
-const edit = { plugin: "blockr.core-edit_board_plugin" };
+const edit = { plugin: { package: "blockr.core", id: "edit_board_plugin" } };
 // The notes plugin, of blockr.test, a package that only the tests know.
-const notes = { plugin: "blockr.test-notes_plugin" };
+const notes = { plugin: { package: "blockr.test", id: "notes_plugin" } };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;

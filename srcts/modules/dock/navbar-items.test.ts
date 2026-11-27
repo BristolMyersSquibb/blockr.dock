@@ -25,7 +25,7 @@ describe("readNavbar()", () => {
           { kind: "menu", id: "more", label: "More", items: [] },
         ],
       },
-      { kind: "module", id: "deck", module: "blockr.test-deck_button" },
+      { kind: "module", id: "deck", module: { package: "blockr.test", id: "deck_button" } },
     ];
     expect(readNavbar({ navbar })).toEqual(navbar);
   });
@@ -36,8 +36,13 @@ describe("readNavbar()", () => {
     expect(() => readNavbar({ navbar: [{ kind: "link", id: "docs", label: "Docs" }] })).toThrow(
       'The href of the navbar item "docs" is undefined',
     );
-    expect(() => readNavbar({ navbar: [{ kind: "module", id: "deck", module: "" }] })).toThrow(
-      'The module of the navbar item "deck" is ""',
+    // A module item names its module by a record of two non-empty strings, its
+    // package and its id.
+    expect(() => readNavbar({ navbar: [{ kind: "module", id: "deck", module: "blockr.test-deck_button" }] })).toThrow(
+      'The module of the navbar item "deck" is "blockr.test-deck_button", where the dock takes the package and the id of a module',
+    );
+    expect(() => readNavbar({ navbar: [{ kind: "module", id: "deck", module: { package: "blockr.test", id: "" } }] })).toThrow(
+      'The module of the navbar item "deck" is {"package":"blockr.test","id":""}',
     );
     expect(() => readNavbar({ navbar: [{ kind: "part" }] })).toThrow("has no kind and id that the dock reads");
     expect(() => readNavbar({ navbar: "logo" })).toThrow('The navbar is "logo"');

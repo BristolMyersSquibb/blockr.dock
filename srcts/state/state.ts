@@ -2,6 +2,7 @@
 // The `update` checks with it what a delta's patches leave of the state.
 
 import type { Json } from "@blockr/core";
+import { isIdRecord } from "./ids.ts";
 import { isList, isObject } from "./json.ts";
 import type { DockState, Folder, Grid, Node, Panel, Rail, Split, TabGroup, View } from "./types.ts";
 
@@ -66,10 +67,10 @@ function isRail(value: Json | undefined): value is Rail {
 }
 
 // Whether a value names a panel: a block by its id or a plugin's class by its
-// id, never both.
+// package and its id, never both.
 function isPanel(value: Json | undefined): value is Panel {
   if (!isObject(value)) return false;
-  return (typeof value.block === "string") !== (typeof value.plugin === "string");
+  return (typeof value.block === "string") !== isIdRecord(value.plugin);
 }
 
 function isRecordOf(value: Json | undefined, item: (value: Json) => boolean): boolean {

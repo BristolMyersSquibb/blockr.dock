@@ -214,7 +214,7 @@
           "type": "object",
           "properties": {
             "plugin": {
-              "$ref": "#/definitions/PluginClassId"
+              "$ref": "#/definitions/IdRecord"
             }
           },
           "required": [
@@ -228,8 +228,26 @@
     "BlockId": {
       "type": "string"
     },
-    "PluginClassId": {
-      "type": "string"
+    "IdRecord": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "description": "The package that defines it, named as R names a package.",
+          "pattern": "^[A-Za-z][A-Za-z0-9.]*[A-Za-z0-9]$"
+        },
+        "id": {
+          "type": "string",
+          "description": "Its id within the package.",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "package",
+        "id"
+      ],
+      "additionalProperties": false,
+      "description": "The id of what a package defines, such as a plugin's class, by the package and the id within it, as { \"package\": \"blockr.core\", \"id\": \"edit_board_plugin\" }."
     },
     "Rail": {
       "type": "object",

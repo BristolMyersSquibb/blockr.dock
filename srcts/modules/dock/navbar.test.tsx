@@ -4,11 +4,12 @@
 // (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.2.5#testing).
 // A storage plugin class whose controls hold every kind, and the modules on
 // the bar, come from a package that only the tests know, blockr.test.
-// The tests give each module to core's test stub by the id that R's reply
-// names it under, since core runs only the plugins that the reply names.
+// The tests give each module to core's test stub by the package and the id
+// that R's reply names it under, since core runs only the plugins that the
+// reply names.
 
 import type { CoreApi, Json, LogLine, PluginClass, StorageControl } from "@blockr/core";
-import { HELLO, stubCore } from "@blockr/core/stubs";
+import { HELLO, id, stubCore } from "@blockr/core/stubs";
 import { expectedErrors } from "@blockr/ui/stubs";
 import { act } from "react";
 import { beforeAll, describe, expect, onTestFinished, test } from "vitest";
@@ -18,10 +19,12 @@ import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
 import { blockModules, click, drawn, pressOn, typeInto } from "./testing.ts";
 
-const DOCK = "blockr.dock-dock_plugin";
-const BASIC = "blockr.core-basic_frontend_plugin";
-const FILE = "blockr.core-file_storage_plugin";
-const STORAGE = "blockr.test-storage_plugin";
+// The classes of the dock, of core's basic frontend, which the dock takes the
+// place of, of core's storage plugin and of the test's, by their Ids.
+const DOCK = id("blockr.dock", "dock_plugin");
+const BASIC = id("blockr.core", "basic_frontend_plugin");
+const FILE = id("blockr.core", "file_storage_plugin");
+const STORAGE = id("blockr.test", "storage_plugin");
 
 interface BarOptions {
   // The navbar items as R writes them, none for the default bar.
@@ -31,8 +34,9 @@ interface BarOptions {
   // The test storage plugin's class.
   readonly storageClass?: Omit<PluginClass, "id">;
   readonly lock?: { readonly board?: boolean; readonly load?: boolean };
-  // Modules that packages offer, by id.
-  readonly modules?: Readonly<Record<string, unknown>>;
+  // Modules that packages offer, by package and then by id, as
+  // { "blockr.test": { deck_button: … } }.
+  readonly offered?: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
   readonly blockrOptions?: Readonly<Record<string, Json>>;
 }
 
@@ -40,23 +44,28 @@ interface BarOptions {
 // element of the document, and stops it as the test finishes.
 async function startBar(options: BarOptions = {}) {
   const storage = options.storage ?? "file";
-  const plugins = Object.fromEntries(
-    Object.entries(HELLO.plugins).filter(([id]) => id !== BASIC && (id !== FILE || storage === "file")),
-  );
+  const plugins = HELLO.plugins.filter((entry) => {
+    const cls = id(entry.package, entry.id);
+    return cls !== BASIC && (cls !== FILE || storage === "file");
+  });
   const frontend: Record<string, Json> = options.navbar === undefined ? {} : { navbar: [...options.navbar] };
   const hello = {
     ...HELLO,
     packages: { ...HELLO.packages, "blockr.dock": "0.2.1", "blockr.test": "1.0.0" },
-    plugins: {
+    plugins: [
       ...plugins,
-      [DOCK]: {
+      {
+        package: DOCK.package,
+        id: DOCK.id,
         name: "Dock",
         version: 1,
         options: ["compact", "view_tabs", "sync_rails", "dark_mode"],
         module: "blockr.dock/js/dock.js",
       },
-      ...(storage === "test" ? { [STORAGE]: { name: "Test storage", version: 1, module: "blockr.test/storage.js" } } : {}),
-    },
+      ...(storage === "test"
+        ? [{ package: STORAGE.package, id: STORAGE.id, name: "Test storage", version: 1, module: "blockr.test/storage.js" }]
+        : []),
+    ],
     options: {
       ...HELLO.options,
       compact: { package: "blockr.dock", module: "blockr.dock/compact-option.js", version: 1 },
@@ -67,17 +76,22 @@ async function startBar(options: BarOptions = {}) {
     frontend,
   };
   const modules = {
-    [DOCK]: dock,
     compact: compactOption,
     view_tabs: viewTabsOption,
     sync_rails: syncRailsOption,
     ...blockModules,
-    ...(options.storageClass === undefined ? {} : { [STORAGE]: { api: 1, default: options.storageClass } }),
-    ...options.modules,
   };
+  // The modules of the plugin classes and those that the test offers, by
+  // package and then by id.
+  const offered: Record<string, Record<string, unknown>> = { [DOCK.package]: { [DOCK.id]: dock } };
+  const offer = (pkg: string, byId: Readonly<Record<string, unknown>>) => {
+    offered[pkg] = { ...offered[pkg], ...byId };
+  };
+  if (options.storageClass !== undefined) offer(STORAGE.package, { [STORAGE.id]: { api: 1, default: options.storageClass } });
+  for (const [pkg, byId] of Object.entries(options.offered ?? {})) offer(pkg, byId);
   const el = document.createElement("div");
   document.body.append(el);
-  const s = await stubCore({ hello, modules, el, blockrOptions: options.blockrOptions ?? {} });
+  const s = await stubCore({ hello, modules, offered, el, blockrOptions: options.blockrOptions ?? {} });
   onTestFinished(() => {
     s.stop();
     el.remove();
@@ -518,14 +532,16 @@ describe("a module on the bar", () => {
     };
     const navbar: Json[] = [
       { kind: "part", id: "logo" },
-      { kind: "module", id: "deck", module: "blockr.test-deck_button" },
+      { kind: "module", id: "deck", module: { package: "blockr.test", id: "deck_button" } },
     ];
-    const s = await startBar({ navbar, modules: { "blockr.test-deck_button": deck } });
+    const s = await startBar({ navbar, offered: { "blockr.test": { deck_button: deck } } });
     await drawn();
 
     expect(barItems(s.el)).toEqual(["logo", "module"]);
     const slot = s.el.querySelector(".blockr-dock-bar-module");
     expect(slot?.textContent).toBe("Deck");
+    // The slot names the module as core's messages name an id.
+    expect(slot?.getAttribute("data-module")).toBe("deck_button of blockr.test");
     expect(rendered).toHaveLength(1);
     expect(rendered[0]?.el).toBe(slot);
     expect(rendered[0]?.core).toBe(s.core);
@@ -541,31 +557,33 @@ describe("a module on the bar", () => {
     const taken = expectedErrors(/cannot draw/);
     const navbar: Json[] = [
       { kind: "part", id: "logo" },
-      { kind: "module", id: "missing", module: "blockr.test-missing" },
-      { kind: "module", id: "newer", module: "blockr.test-newer" },
-      { kind: "module", id: "broken", module: "blockr.test-broken" },
+      { kind: "module", id: "missing", module: { package: "blockr.test", id: "missing" } },
+      { kind: "module", id: "newer", module: { package: "blockr.test", id: "newer" } },
+      { kind: "module", id: "broken", module: { package: "blockr.test", id: "broken" } },
       { kind: "part", id: "options" },
     ];
-    const modules = {
-      "blockr.test-newer": { api: 2, default: { render: () => undefined } },
-      "blockr.test-broken": {
-        api: 1,
-        default: {
-          render: () => {
-            throw new Error("No canvas.");
+    const offered = {
+      "blockr.test": {
+        newer: { api: 2, default: { render: () => undefined } },
+        broken: {
+          api: 1,
+          default: {
+            render: () => {
+              throw new Error("No canvas.");
+            },
           },
         },
       },
     };
-    const s = await startBar({ navbar, modules });
+    const s = await startBar({ navbar, offered });
     await drawn();
 
     expect(barItems(s.el)).toEqual(["logo", "warning", "warning", "warning", "options"]);
     const titles = [...s.el.querySelectorAll<HTMLElement>(".blockr-dock-bar-warning")].map((w) => w.title);
-    expect(titles[0]).toContain("blockr.test-missing");
-    expect(titles[1]).toContain("blockr.test-newer");
+    expect(titles[0]).toContain('The navbar item "missing" cannot draw its module missing of blockr.test');
+    expect(titles[1]).toContain("newer of blockr.test");
     expect(titles[1]).toContain("major 2");
-    expect(titles[2]).toContain("blockr.test-broken");
+    expect(titles[2]).toContain("broken of blockr.test");
     expect(titles[2]).toContain("No canvas.");
     expect(errors(s.logged, "blockr.dock")).toHaveLength(3);
 
@@ -637,7 +655,7 @@ describe("the dock's own parts", () => {
     expect(undo.getAttribute("aria-keyshortcuts")).toBe("Control+Z Meta+Z");
     expect(redo.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+Z Meta+Shift+Z Control+Y");
 
-    await act(() => core.commands.run("blockr.core-change_board", { name: "Renamed" }));
+    await act(() => core.commands.run(id("blockr.core", "change_board"), { name: "Renamed" }));
     await drawn();
     expect(undo.disabled).toBe(false);
 

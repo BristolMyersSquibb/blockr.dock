@@ -1,15 +1,32 @@
 test_that("blk() and plg() name the panel of a block and that of a plugin", {
 
   expect_true(is_panel_ref(blk("a")))
-  expect_true(is_panel_ref(plg("blockr.core-edit_board_plugin")))
+  expect_true(is_panel_ref(plg("edit_board_plugin", package = "blockr.core")))
   expect_false(is_panel_ref("a"))
 
   expect_output(print(blk("a")), "<panel_ref> blk(\"a\")", fixed = TRUE)
   expect_output(print(plg("edit")), "<panel_ref> plg(\"edit\")", fixed = TRUE)
+  expect_output(
+    print(plg("edit_board_plugin", package = "blockr.core")),
+    "<panel_ref> plg(\"edit_board_plugin\", package = \"blockr.core\")",
+    fixed = TRUE
+  )
 
   expect_error(blk(""), class = "dock_panel_ref_invalid")
   expect_error(plg(c("a", "b")), class = "dock_panel_ref_invalid")
   expect_error(blk(NA_character_), class = "dock_panel_ref_invalid")
+
+  # A plugin's class names its package by a string that is not empty.
+  expect_error(
+    plg("edit_board_plugin", package = ""),
+    "names the package of a plugin's class by a string that is not empty",
+    fixed = TRUE,
+    class = "dock_panel_ref_invalid"
+  )
+  expect_error(
+    plg("edit_board_plugin", package = c("a", "b")),
+    class = "dock_panel_ref_invalid"
+  )
 
   # A reference carries no placement hint, so one fails at the call site.
   expect_error(blk("a", side = "right"), "unused argument")

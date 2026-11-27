@@ -18,7 +18,7 @@ navbar_menu(id, label, ...)
 
 navbar_storage(id)
 
-navbar_item(id, module)
+navbar_item(id, module, package)
 
 is_navbar_item(x)
 
@@ -43,8 +43,9 @@ For \code{navbar_storage()}, the id of the storage plugin's control.}
 For \code{frontend_args()}, the other arguments of \code{\link[blockr.core:serve]{blockr.core::serve()}}.
 The dock refuses them.}
 
-\item{module}{The id of a module that a package offers, which has the form
-\code{{package}-{name}}}
+\item{module}{The id of a module within the package that offers it}
+
+\item{package}{For \code{navbar_item()}, the package that offers the module}
 
 \item{x}{An object.
 For \code{frontend_args()}, the dock plugin, from \code{\link[=new_dock_plugin]{new_dock_plugin()}}.}
@@ -99,11 +100,12 @@ It opens in a new tab.
 control's id.
 The dock draws that control in the item's place, and the \code{storage} part
 draws the other controls.
-\item A module that a package offers, from \code{navbar_item()}, by the module's
-id, \code{{pkg}-{name}}.
+\item A module that a package offers, from \code{navbar_item()}, by the module's id
+and the package that offers it, as
+\code{navbar_item("deck", "deck_button", package = "blockr.test")}.
 The module draws the item.
-R checks that the id is a non-empty string.
-It does not check that a package offers the module.
+R checks that the id and the package are non-empty strings.
+It does not check that the package offers the module.
 The client loads the module as it draws the bar.
 }
 
@@ -122,7 +124,9 @@ item, at the end of the bar.
 Each item is a list of its \code{kind}, its \code{id} and the fields of its kind.
 R writes it as a JSON object for the client.
 The kinds are \code{part}, \code{storage}, \code{link} with \code{label} and \code{href}, \code{menu}
-with \code{label} and \code{items}, and \code{module} with \code{module}.
+with \code{label} and \code{items}, and \code{module} with \code{module}, a list of the
+module's \code{package} and \code{id}, which R writes as
+\verb{\{ "package": "blockr.test", "id": "deck_button" \}}.
 }
 \examples{
 issues <- "https://github.com/BristolMyersSquibb/blockr/issues/new"

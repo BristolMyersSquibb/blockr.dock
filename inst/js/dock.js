@@ -219,7 +219,7 @@ var dock_schema_default = {
           type: "object",
           properties: {
             plugin: {
-              $ref: "#/definitions/PluginClassId"
+              $ref: "#/definitions/IdRecord"
             }
           },
           required: [
@@ -233,8 +233,26 @@ var dock_schema_default = {
     BlockId: {
       type: "string"
     },
-    PluginClassId: {
-      type: "string"
+    IdRecord: {
+      type: "object",
+      properties: {
+        package: {
+          type: "string",
+          description: "The package that defines it, named as R names a package.",
+          pattern: "^[A-Za-z][A-Za-z0-9.]*[A-Za-z0-9]$"
+        },
+        id: {
+          type: "string",
+          description: "Its id within the package.",
+          minLength: 1
+        }
+      },
+      required: [
+        "package",
+        "id"
+      ],
+      additionalProperties: false,
+      description: `The id of what a package defines, such as a plugin's class, by the package and the id within it, as { "package": "blockr.core", "id": "edit_board_plugin" }.`
     },
     Rail: {
       type: "object",
@@ -332,6 +350,17 @@ function sameJson(a, b) {
   return names.length === Object.keys(b).length && names.every((name2) => Object.hasOwn(b, name2) && sameJson(a[name2] ?? null, b[name2] ?? null));
 }
 
+// srcts/state/ids.ts
+function isIdRecord(value) {
+  return isObject(value) && typeof value.package === "string" && typeof value.id === "string";
+}
+function sameId(a, b) {
+  return a.package === b.package && a.id === b.id;
+}
+function idText(x) {
+  return x.package === null ? x.id : `${x.id} of ${x.package}`;
+}
+
 // srcts/state/state.ts
 var defaultState = { views: {}, folders: {}, active: null, visible: {} };
 function isDockState(value) {
@@ -366,7 +395,7 @@ function isRail(value) {
 }
 function isPanel(value) {
   if (!isObject(value)) return false;
-  return typeof value.block === "string" !== (typeof value.plugin === "string");
+  return typeof value.block === "string" !== isIdRecord(value.plugin);
 }
 function isRecordOf(value, item) {
   return isObject(value) && Object.values(value).every(item);
@@ -384,7 +413,7 @@ function isTabGroup2(node) {
   return "panels" in node;
 }
 function samePanel(a, b) {
-  return "block" in a ? "block" in b && a.block === b.block : "plugin" in b && a.plugin === b.plugin;
+  return "block" in a ? "block" in b && a.block === b.block : "plugin" in b && sameId(a.plugin, b.plugin);
 }
 function gridPanels(grid2) {
   return [...tabGroups(grid2).flatMap((group) => group.panels), ...rails(grid2).flatMap(([, rail2]) => rail2.panels)];
@@ -493,7 +522,7 @@ function count(n, one, many) {
   return `${String(n)} ${n === 1 ? one : many}`;
 }
 function panelName(panel2) {
-  return "block" in panel2 ? `the panel of the block "${panel2.block}"` : `the panel of the plugin "${panel2.plugin}"`;
+  return "block" in panel2 ? `the panel of the block "${panel2.block}"` : `the panel of the plugin "${idText(panel2.plugin)}"`;
 }
 function placePanel(grid2, panel2) {
   if (places(grid2, panel2)) return grid2;
@@ -692,9 +721,13 @@ function gridChanges(stored, grid2) {
   };
 }
 function arrangement(grid2) {
-  const node = (child) => isTabGroup2(child) ? child.panels : child.children.map(node);
-  const edges = rails(grid2).map(([edge2, rail2]) => [edge2, rail2.panels]);
+  const panels = (list) => list.map(namedPanel);
+  const node = (child) => isTabGroup2(child) ? panels(child.panels) : child.children.map(node);
+  const edges = rails(grid2).map(([edge2, rail2]) => [edge2, panels(rail2.panels)]);
   return { orientation: grid2.orientation, children: grid2.children.map(node), rails: Object.fromEntries(edges) };
+}
+function namedPanel(panel2) {
+  return "block" in panel2 ? { block: panel2.block } : { plugin: { package: panel2.plugin.package, id: panel2.plugin.id } };
 }
 function shape(grid2) {
   const node = (child) => isTabGroup2(child) ? "tab group" : child.children.map(node);
@@ -826,8 +859,8 @@ function patched(state, patches, plugin) {
   let at2 = state;
   for (const patch of patches) {
     const segments = segmentsFromPath(patch.path);
-    if (segments?.[0] !== "plugins" || segments[1] !== plugin) continue;
-    at2 = at2 === void 0 ? void 0 : applied(at2, segments.slice(2), patch);
+    if (segments?.[0] !== "plugins" || segments[1] !== plugin.package || segments[2] !== plugin.id) continue;
+    at2 = at2 === void 0 ? void 0 : applied(at2, segments.slice(3), patch);
   }
   return at2;
 }
@@ -873,7 +906,7 @@ function arrayIndex(segment) {
 
 // srcts/state/update.ts
 function update(delta, board, plugin) {
-  const stored = board.plugins[plugin];
+  const stored = board.plugins[plugin.package]?.[plugin.id];
   const given = stored === void 0 ? void 0 : patched(stored, delta.patches ?? [], plugin);
   const removed = new Set(delta.blocks?.rm ?? []);
   const added = Object.keys(delta.blocks?.add ?? {});
@@ -884,7 +917,7 @@ function update(delta, board, plugin) {
   const { state: moved, moves } = rehoused(cleared, before2);
   const active = moved.active !== null && Object.hasOwn(moved.views, moved.active) ? moved.active : firstView(moved);
   const state = placeBlocks({ ...moved, active }, added);
-  const at2 = (...segments) => pointer(["plugins", plugin, ...segments]);
+  const at2 = (...segments) => pointer(["plugins", plugin.package, plugin.id, ...segments]);
   const patches = [];
   for (const [id, view2] of Object.entries(state.views)) {
     if (view2.grid !== given.views[id]?.grid) {
@@ -1085,9 +1118,9 @@ function asLogical(text2) {
 }
 
 // srcts/commands/common.ts
-var DOCK = "blockr.dock-dock_plugin";
+var DOCK = { package: "blockr.dock", id: "dock_plugin" };
 function dockState(board) {
-  const state = board.plugins[DOCK];
+  const state = board.plugins[DOCK.package]?.[DOCK.id];
   return isDockState(state) ? state : void 0;
 }
 function activeView(board) {
@@ -1096,7 +1129,7 @@ function activeView(board) {
   return active === null ? void 0 : state?.views[active];
 }
 function at(...segments) {
-  return pointer(["plugins", DOCK, ...segments]);
+  return pointer(["plugins", DOCK.package, DOCK.id, ...segments]);
 }
 function command(definition) {
   return definition;
@@ -1188,7 +1221,10 @@ var before = {
   description: 'The view or folder that it goes before, as { "view": id } or { "folder": id }, which sits in the folder that it goes into. It goes at the end of that folder where this is left out.',
   anyOf: [object({ view }, ["view"]), object({ folder }, ["folder"])]
 };
-var panel = ref("Panel", `A panel, as a grid names it: { "block": id } for a block's card, or { "plugin": id } for the UI of a plugin, by the id of its class.`);
+var panel = ref(
+  "Panel",
+  `A panel, as a grid names it: { "block": id } for a block's card, or { "plugin": { "package": package, "id": id } } for the UI of a plugin, by the package and the id of its class.`
+);
 function near(what) {
   return ref(
     "Panel",
@@ -1249,7 +1285,7 @@ function keep(changes, locks, context) {
 }
 var panelCommands = [
   command({
-    id: "blockr.dock-add_panel",
+    id: "add_panel",
     label: "Add panel",
     description: "Places a panel in a view that does not show it, as the tab that its tab group or rail shows: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place, a new tab in the last tab group that holds no plugin's panel.",
     args: placeArgs("goes"),
@@ -1265,7 +1301,7 @@ var panelCommands = [
     }
   }),
   command({
-    id: "blockr.dock-remove_panel",
+    id: "remove_panel",
     label: "Remove panel",
     description: "Takes a panel out of a view, as closing its tab does. It removes no block, and the panel stays in the other views that show it.",
     args: object({ view, panel }, ["view", "panel"]),
@@ -1279,9 +1315,9 @@ var panelCommands = [
     }
   }),
   command({
-    id: "blockr.dock-move_panel",
+    id: "move_panel",
     label: "Move panel",
-    description: "Moves a panel within a view that shows it, placed as blockr.dock-add_panel places one: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place.",
+    description: "Moves a panel within a view that shows it, placed as add_panel places one: in or beside the tab group of the panel that `near` names, on the side that `side` names, on the rail that `rail` names, or at the default place.",
     args: placeArgs("moves"),
     preflight(board, { view: view2, panel: panel2, near: near2 }) {
       return shows(board, view2, panel2) && (near2 === void 0 || !samePanel(near2, panel2));
@@ -1304,7 +1340,7 @@ var panelCommands = [
     }
   }),
   command({
-    id: "blockr.dock-resize_panel",
+    id: "resize_panel",
     label: "Resize panel",
     description: "Sets the size of the tab group that holds a panel: its share of the split that holds it, a ratio between 0 and 1, while the other children of the split share the rest in proportion. For a panel on a rail, it sets the rail's width in pixels while it is open.",
     args: object(
@@ -1334,7 +1370,7 @@ var panelCommands = [
     }
   }),
   command({
-    id: "blockr.dock-activate_panel",
+    id: "activate_panel",
     label: "Activate panel",
     description: "Has the tab group or rail that holds a panel show it, as clicking its tab does. It takes no undo step, since it changes only what the user looks at.",
     args: object({ view, panel }, ["view", "panel"]),
@@ -1349,7 +1385,7 @@ var panelCommands = [
     }
   }),
   command({
-    id: "blockr.dock-show_panel",
+    id: "show_panel",
     label: "Show panel",
     description: "Shows a panel in the active view, as the dock carries out core's show(): has the tab group or rail that holds it show it, opening the rail where it is collapsed, where the view shows it, and places it at the default place where the view does not, a new tab in the last tab group that holds no plugin's panel. While the board option sync_rails is on, a rail that it opens opens on every view that has a rail on that edge. It never switches views, and takes no undo step, since showing takes none. On a locked board, it only has a tab group or rail show a panel that the view shows.",
     args: object({ panel }, ["panel"]),
@@ -1375,7 +1411,7 @@ var panelCommands = [
     }
   }),
   command({
-    id: "blockr.dock-set_grid",
+    id: "set_grid",
     label: "Set grid",
     description: "Sets a view's whole grid, which says which panels the view shows and where, as the dock does after the user drags a panel or a border. A grid places each panel once, and the shares of each split are above 0 and sum to 1. Where the grid has the same splits and tab groups as the view's, a split keeps its shares unless the grid moves one by more than the blockr option dock_grid_size_tol, 0.005 unless set.",
     args: object({ view, grid }, ["view", "grid"]),
@@ -1396,7 +1432,7 @@ var panelCommands = [
     }
   }),
   command({
-    id: "blockr.dock-collapse_rail",
+    id: "collapse_rail",
     label: "Collapse rail",
     description: "Collapses the rail on an edge of a view, which then shows its tabs alone, or opens it. While the board option sync_rails is on, it does so on every view that has a rail on that edge. It takes no undo step, since it changes only what the user looks at.",
     args: object(
@@ -1432,7 +1468,7 @@ function railViews(state, view2, edge2) {
 var SECTIONS = ["inputs", "outputs"];
 var sectionCommands = [
   command({
-    id: "blockr.dock-set_sections",
+    id: "set_sections",
     label: "Set card sections",
     description: "Sets the sections of a block's card that show: its inputs, its outputs, both, or neither. A card shows both unless this sets it otherwise.",
     args: object(
@@ -1472,7 +1508,7 @@ function taken(state) {
 }
 var viewCommands = [
   command({
-    id: "blockr.dock-add_view",
+    id: "add_view",
     label: "Add view",
     description: 'Adds a view, under a new id, and makes it the active view. It goes into a folder, or to the top, before the view or folder that `before` names, or at the end. Where no name is given, it is named "View N", with N one more than the views there are, or the first N after it that no view\'s name has. Where no grid is given, it shows nothing.',
     args: object({
@@ -1508,7 +1544,7 @@ var viewCommands = [
     }
   }),
   command({
-    id: "blockr.dock-remove_view",
+    id: "remove_view",
     label: "Remove view",
     description: "Removes a view, and makes the first view of the navigation active where the view it removes was. It removes no block, and refuses to remove the last view.",
     args: object({ view }, ["view"]),
@@ -1526,7 +1562,7 @@ var viewCommands = [
     }
   }),
   command({
-    id: "blockr.dock-rename_view",
+    id: "rename_view",
     label: "Rename view",
     description: "Gives a view a new name.",
     args: object({ view, name: name("view", "The view's new name.") }, ["view", "name"]),
@@ -1537,7 +1573,7 @@ var viewCommands = [
     run: (_board, { view: view2, name: name2 }) => ({ patches: [{ op: "replace", path: at("views", view2, "name"), value: name2 }] })
   }),
   command({
-    id: "blockr.dock-move_view",
+    id: "move_view",
     label: "Move view",
     description: "Moves a view into a folder, or to the top, before the view or folder that `before` names, or at the end of that folder.",
     args: object({ view, folder: into("view"), before }, ["view", "folder"]),
@@ -1559,7 +1595,7 @@ var viewCommands = [
     }
   }),
   command({
-    id: "blockr.dock-activate_view",
+    id: "activate_view",
     label: "Activate view",
     description: "Makes a view the active one, which the dock shows. It takes no undo step, since it changes only what the user looks at.",
     args: object({ view }, ["view"]),
@@ -1571,7 +1607,7 @@ var viewCommands = [
     run: (_board, { view: view2 }) => ({ patches: [{ op: "replace", path: at("active"), value: view2 }] })
   }),
   command({
-    id: "blockr.dock-add_folder",
+    id: "add_folder",
     label: "Add folder",
     description: 'Adds a folder, under a new id, which groups views and other folders in the navigation. It goes into a folder, or to the top, before the view or folder that `before` names, or at the end. Where no name is given, it is named "Folder N", with N one more than the folders there are, or the first N after it that no folder\'s name has.',
     args: object({
@@ -1597,7 +1633,7 @@ var viewCommands = [
     }
   }),
   command({
-    id: "blockr.dock-remove_folder",
+    id: "remove_folder",
     label: "Remove folder",
     description: "Removes a folder, and moves the views and folders that it holds up into the folder that held it, in its place and in their order. It removes no view.",
     args: object({ folder }, ["folder"]),
@@ -1622,7 +1658,7 @@ var viewCommands = [
     }
   }),
   command({
-    id: "blockr.dock-rename_folder",
+    id: "rename_folder",
     label: "Rename folder",
     description: "Gives a folder a new name.",
     args: object({ folder, name: name("folder", "The folder's new name.") }, ["folder", "name"]),
@@ -1635,7 +1671,7 @@ var viewCommands = [
     })
   }),
   command({
-    id: "blockr.dock-move_folder",
+    id: "move_folder",
     label: "Move folder",
     description: "Moves a folder, with what it holds, into another folder, or to the top, before the view or folder that `before` names, or at the end of that folder. It refuses to move a folder into itself or into a folder inside it.",
     args: object({ folder, into: into("folder"), before }, ["folder", "into"]),
@@ -1674,11 +1710,11 @@ function gestureRuns(view2, shown, read, stored, reading) {
   );
   const changes = gridChanges(before2, after2);
   if (changes.panels || changes.arrangement || changes.sizes) {
-    return [{ id: "blockr.dock-set_grid", args: { view: view2, grid: after2 } }];
+    return [{ id: "set_grid", args: { view: view2, grid: after2 } }];
   }
   const runs = [];
   const activate2 = (panel2) => {
-    runs.push({ id: "blockr.dock-activate_panel", args: { view: view2, panel: panel2 } });
+    runs.push({ id: "activate_panel", args: { view: view2, panel: panel2 } });
   };
   const groups = tabGroups(before2);
   tabGroups(after2).forEach((group, i) => {
@@ -1690,7 +1726,7 @@ function gestureRuns(view2, shown, read, stored, reading) {
     if (was === void 0 || rail2 === void 0) continue;
     if (!samePanel(was.active, rail2.active)) activate2(rail2.active);
     if (was.collapsed !== rail2.collapsed) {
-      runs.push({ id: "blockr.dock-collapse_rail", args: { view: view2, edge: edge2, collapsed: rail2.collapsed } });
+      runs.push({ id: "collapse_rail", args: { view: view2, edge: edge2, collapsed: rail2.collapsed } });
     }
   }
   return runs;
@@ -1701,8 +1737,8 @@ function columnRuns(view2, shown, read) {
   const showing2 = tabGroups(shown).map((group) => group.active);
   const shows2 = tabGroups(read).map((group) => group.active).filter((panel2) => !showing2.some((other) => samePanel(other, panel2)));
   return [
-    ...removed.map((panel2) => ({ id: "blockr.dock-remove_panel", args: { view: view2, panel: panel2 } })),
-    ...shows2.map((panel2) => ({ id: "blockr.dock-activate_panel", args: { view: view2, panel: panel2 } }))
+    ...removed.map((panel2) => ({ id: "remove_panel", args: { view: view2, panel: panel2 } })),
+    ...shows2.map((panel2) => ({ id: "activate_panel", args: { view: view2, panel: panel2 } }))
   ];
 }
 function withStoredRails(grid2, stored, moved) {
@@ -1721,7 +1757,7 @@ function withStoredRails(grid2, stored, moved) {
 
 // srcts/layout/ids.ts
 function panelId(panel2) {
-  return "block" in panel2 ? JSON.stringify({ block: panel2.block }) : JSON.stringify({ plugin: panel2.plugin });
+  return "block" in panel2 ? JSON.stringify({ block: panel2.block }) : JSON.stringify({ plugin: { package: panel2.plugin.package, id: panel2.plugin.id } });
 }
 function panelFromId(id) {
   let value;
@@ -1735,8 +1771,9 @@ function panelFromId(id) {
   if (keys.length !== 1) return void 0;
   const { block, plugin } = value;
   if (typeof block === "string") return { block };
-  if (typeof plugin === "string") return { plugin };
-  return void 0;
+  if (typeof plugin !== "object" || plugin === null || Array.isArray(plugin) || Object.keys(plugin).length !== 2) return void 0;
+  const { package: pkg, id: cls } = plugin;
+  return typeof pkg === "string" && typeof cls === "string" ? { plugin: { package: pkg, id: cls } } : void 0;
 }
 function railId(edge2) {
   return `rail-${edge2}`;
@@ -1888,15 +1925,38 @@ function stackGrid(grid2, cap) {
   };
 }
 
+// srcts/modules/dock/context.ts
+import { createContext, useContext } from "react";
+var DockContext = createContext(null);
+function useDock() {
+  const value = useContext(DockContext);
+  if (value === null) throw new Error("A component of the dock is drawn outside the dock.");
+  return value;
+}
+function runEdit(core, edit, args) {
+  const running = isBatch(edit) ? core.commands.run(edit) : core.commands.run(edit, args);
+  running.catch(() => {
+  });
+}
+function isBatch(edit) {
+  return Array.isArray(edit);
+}
+function panelClass(core, panel2) {
+  return core.id(panel2.plugin.package, panel2.plugin.id);
+}
+function giveFocus(core, block) {
+  if (core.focus.get() !== block) core.focus.set(block);
+}
+
 // srcts/modules/dock/demand.ts
 var OWNER = "blockr.dock";
 var SHOWN = 1;
-function onScreen(board, drawn, narrow) {
+function onScreen(core, board, drawn, narrow) {
   const state = dockState(board);
   const active = state?.active ?? null;
   const view2 = active === null ? void 0 : state?.views[active];
   if (view2 === void 0) return { blocks: [], plugins: [] };
-  const title = (panel2) => "block" in panel2 ? board.blocks[panel2.block]?.name : drawn.get(panel2.plugin);
+  const title = (panel2) => "block" in panel2 ? board.blocks[panel2.block]?.name : drawn.get(panelClass(core, panel2));
   const grid2 = layoutToGrid(gridToLayout(view2.grid, title, { width: 0, height: 0 }));
   const shown = [
     ...tabGroups(grid2).map((group) => group.active),
@@ -1907,14 +1967,14 @@ function onScreen(board, drawn, narrow) {
   ];
   return {
     blocks: shown.flatMap((panel2) => "block" in panel2 ? [panel2.block] : []),
-    plugins: shown.flatMap((panel2) => "plugin" in panel2 ? [panel2.plugin] : [])
+    plugins: shown.flatMap((panel2) => "plugin" in panel2 ? [panelClass(core, panel2)] : [])
   };
 }
 function demandShown(core, drawn, narrow) {
-  const blocks = () => (board) => onScreen(board, drawn, narrow.get()).blocks;
+  const blocks = () => (board) => onScreen(core, board, drawn, narrow.get()).blocks;
   const demand = core.scheduler.demand(OWNER, blocks(), { priority: SHOWN });
   const tell = (board) => {
-    core.onScreen.set(onScreen(board, drawn, narrow.get()));
+    core.onScreen.set(onScreen(core, board, drawn, narrow.get()));
   };
   tell(core.store.board());
   const offBoard = core.store.subscribe((_change, board) => {
@@ -1936,7 +1996,7 @@ function trackBusy(core, drawn, narrow, delay) {
   let turning = false;
   let timer;
   const listeners = /* @__PURE__ */ new Set();
-  const evaluating = () => onScreen(core.store.board(), drawn, narrow.get()).blocks.some((block) => {
+  const evaluating = () => onScreen(core, core.store.board(), drawn, narrow.get()).blocks.some((block) => {
     const status = core.scheduler.status(block)?.status;
     return status === "stale" || status === "unevaluated";
   });
@@ -1985,23 +2045,6 @@ function trackBusy(core, drawn, narrow, delay) {
 // srcts/modules/dock/card/card.tsx
 import { useBoard, useNotified, useStatus } from "@blockr/core/react";
 import { useCallback as useCallback2, useState as useState3 } from "react";
-
-// srcts/modules/dock/context.ts
-import { createContext, useContext } from "react";
-var DockContext = createContext(null);
-function useDock() {
-  const value = useContext(DockContext);
-  if (value === null) throw new Error("A component of the dock is drawn outside the dock.");
-  return value;
-}
-function runEdit(core, edit, args) {
-  const running = typeof edit === "string" ? core.commands.run(edit, args) : core.commands.run(edit);
-  running.catch(() => {
-  });
-}
-function giveFocus(core, block) {
-  if (core.focus.get() !== block) core.focus.set(block);
-}
 
 // srcts/modules/dock/mounted.tsx
 import { useLayoutEffect, useRef } from "react";
@@ -2098,10 +2141,6 @@ var UNCATEGORIZED = "uncategorized";
 function categoryOf(entry) {
   return entry === void 0 || entry.category === "" ? UNCATEGORIZED : entry.category;
 }
-function packageOf(id) {
-  const at2 = id.indexOf("-");
-  return at2 > 0 ? id.slice(0, at2) : null;
-}
 function Mark({
   entry,
   size,
@@ -2133,13 +2172,13 @@ function classGroups(entries, pick) {
     key: category,
     title: category,
     rows: list.sort((a, b) => a.name.localeCompare(b.name)).map((entry) => {
-      const pkg = packageOf(entry.id);
+      const pkg = entry.package;
       return {
-        key: entry.id,
+        key: idText(entry),
         label: entry.name,
         lead: /* @__PURE__ */ jsx5(Mark, { entry, size: 24 }),
         ...pkg === null ? {} : { badge: pkg },
-        search: [entry.id, entry.category, ...entry.keywords].join(" "),
+        search: [idText(entry), entry.category, ...entry.keywords].join(" "),
         onPick: () => {
           pick(entry);
         }
@@ -2440,7 +2479,7 @@ function Header({
   const open = block.locked === false;
   const toggle = (section) => {
     const shown = sections.includes(section) ? sections.filter((each) => each !== section) : [...sections, section];
-    runEdit(core, "blockr.dock-set_sections", {
+    runEdit(core, core.id("blockr.dock", "set_sections"), {
       block: id,
       sections: SECTIONS.filter((each) => shown.includes(each))
     });
@@ -2455,7 +2494,7 @@ function Header({
       {
         name: block.name,
         onCommit: (name2) => {
-          runEdit(core, "blockr.core-change_block", { id, name: name2 });
+          runEdit(core, core.id("blockr.core", "change_block"), { id, name: name2 });
         },
         onDone: (restore) => {
           setRenaming(false);
@@ -2493,7 +2532,7 @@ function Header({
             label: open ? "Open to readers" : "Locked for readers",
             pressed: open,
             onClick: () => {
-              runEdit(core, "blockr.core-change_block", { id, locked: open ? null : false });
+              runEdit(core, core.id("blockr.core", "change_block"), { id, locked: open ? null : false });
             },
             children: /* @__PURE__ */ jsx8(LockIcon, { open })
           }
@@ -2508,8 +2547,8 @@ function HeaderMark({
   block,
   dot
 }) {
-  const pkg = packageOf(block.registry_id);
-  const name2 = entry?.name ?? block.registry_id;
+  const pkg = block.registry_id.package;
+  const name2 = entry?.name ?? block.registry_id.id;
   const { props, tooltip } = useTooltip([pkg === null ? { text: name2 } : { text: name2, badge: pkg }]);
   return /* @__PURE__ */ jsxs4("span", { className: "blockr-card-mark-frame", children: [
     /* @__PURE__ */ jsx8(Mark, { entry, size: 32, role: "img", "aria-label": pkg === null ? name2 : `${name2}, ${pkg}`, ...props }),
@@ -2642,8 +2681,8 @@ function MenuButton({
     const { blocks } = core.store.board();
     const added = core.mintId((candidate) => Object.hasOwn(blocks, candidate));
     runEdit(core, [
-      { id: "blockr.core-add_block", args: { registry_id: entry.id, id: added } },
-      { id: "blockr.core-add_link", args: { from: id, to: added, ...input } }
+      { id: core.id("blockr.core", "add_block"), args: { registry_id: { package: entry.package, id: entry.id }, id: added } },
+      { id: core.id("blockr.core", "add_link"), args: { from: id, to: added, ...input } }
     ]);
   };
   const copyItem = /* @__PURE__ */ jsxs4(MenuItem2, { id: "copy", textValue: "Copy block ID", onAction: copy, children: [
@@ -2674,7 +2713,7 @@ function MenuButton({
         textValue: "Remove block",
         className: "blockr-card-menu-danger",
         onAction: () => {
-          runEdit(core, "blockr.core-remove_block", { id });
+          runEdit(core, core.id("blockr.core", "remove_block"), { id });
         },
         children: /* @__PURE__ */ jsxs4(Text, { slot: "label", className: "blockr-card-menu-lead", children: [
           /* @__PURE__ */ jsx8(BinIcon, {}),
@@ -2712,7 +2751,7 @@ function MenuButton({
         caption: `Append to ${block.name}`,
         search: { label: "Search blocks", empty: "No matches" },
         groups: classGroups(
-          Object.values(core.blockRegistry()).filter((entry) => entry.inputs.length > 0),
+          [...core.blockRegistry().values()].filter((entry) => entry.inputs.length > 0),
           append
         ),
         onClose: () => {
@@ -2988,7 +3027,7 @@ function BlockCard({ id }) {
   if (block === void 0) return null;
   const sections = dockState(board)?.visible[id] ?? SECTIONS;
   const compact2 = core.options.value("compact") === true;
-  const entry = core.blockRegistry()[block.registry_id];
+  const entry = core.blockRegistry().get(block.registry_id);
   const inputs = !core.store.locked(id);
   const hidden = status !== void 0 && WITHOUT_OUTPUT.has(status.status);
   const note = status !== void 0 && WITH_NOTE.has(status.status) ? status.reason : null;
@@ -3057,7 +3096,7 @@ function drawDock(options) {
     const held = id === null ? void 0 : state?.views[id];
     return id === null || held === void 0 ? void 0 : { id, grid: held.grid };
   };
-  const title = (panel2) => "block" in panel2 ? core.store.board().blocks[panel2.block]?.name : drawn.get(panel2.plugin);
+  const title = (panel2) => "block" in panel2 ? core.store.board().blocks[panel2.block]?.name : drawn.get(panelClass(core, panel2));
   const size = () => ({ width: api2.width, height: api2.height });
   const read = () => layoutToGrid(api2.toJSON());
   const target = (grid2) => column ? stackGrid(grid2, settings.fraction).grid : grid2;
@@ -3144,7 +3183,7 @@ function drawDock(options) {
   }
   function send(run) {
     pending += 1;
-    void core.commands.run(run.id, run.args).catch(() => {
+    void core.commands.run(core.id("blockr.dock", run.id), run.args).catch(() => {
     }).finally(() => {
       pending -= 1;
       reconcile();
@@ -3274,13 +3313,14 @@ function drawDock(options) {
   doc.addEventListener("drop", onDragDone);
   doc.addEventListener("dragend", onDragDone);
   doc.addEventListener("keydown", onKey);
-  let lastState = core.store.board().plugins[plugin];
+  const stateOf = (board) => board.plugins[plugin.package]?.[plugin.id];
+  let lastState = stateOf(core.store.board());
   const offBoard = core.store.subscribe((_change, board) => {
-    if (board.plugins[plugin] === lastState) {
+    if (stateOf(board) === lastState) {
       retitle();
       return;
     }
-    lastState = board.plugins[plugin];
+    lastState = stateOf(board);
     reconcile();
   });
   const offNarrow = narrow.subscribe(() => {
@@ -3385,7 +3425,7 @@ function pickerGroups(board, registry, drawn, pick) {
   if (view2 === void 0) return [];
   const blocks = Object.entries(board.blocks).flatMap(([block, held]) => {
     if (places(view2.grid, { block })) return [];
-    const entry = registry[held.registry_id];
+    const entry = registry.get(held.registry_id);
     return [
       {
         key: `block:${block}`,
@@ -3402,9 +3442,9 @@ function pickerGroups(board, registry, drawn, pick) {
   const plugins = [...drawn].flatMap(
     ([plugin, name2]) => places(view2.grid, { plugin }) ? [] : [
       {
-        key: `plugin:${plugin}`,
+        key: `plugin:${idText(plugin)}`,
         label: name2,
-        search: plugin,
+        search: idText(plugin),
         onPick: () => {
           pick({ plugin });
         }
@@ -3425,7 +3465,7 @@ function PanelMenu({ picking, onClose }) {
       const view2 = dockState(core.store.board())?.active ?? null;
       if (view2 === null) return;
       const args = near2 === void 0 ? { view: view2, panel: panel2 } : { view: view2, panel: panel2, near: near2, side: "within" };
-      core.commands.run("blockr.dock-add_panel", args).catch(() => {
+      core.commands.run(core.id("blockr.dock", "add_panel"), args).catch(() => {
       });
     };
     return pickerGroups(board, core.blockRegistry(), drawn, pick);
@@ -3468,7 +3508,7 @@ var KINDS = /* @__PURE__ */ new Set(["button", "menu", "status"]);
 function drawnControls(core) {
   const storage = core.plugins.storage();
   if (storage === void 0) return void 0;
-  const plugin = Object.keys(core.plugins.appPlugins()).find((id) => core.plugins.pluginClass(id).storage === storage);
+  const plugin = [...core.plugins.appPlugins().keys()].find((id) => core.plugins.pluginClass(id).storage === storage);
   if (plugin === void 0) return void 0;
   const twice = /* @__PURE__ */ new Set();
   let controls;
@@ -3476,7 +3516,7 @@ function drawnControls(core) {
     controls = distinct(storage.controls({ core, plugin }), twice);
   } catch (error) {
     const failed = errorMessage(error);
-    return { failed, package: packageFromId(plugin), problem: `The storage controls of ${plugin} failed: ${failed}` };
+    return { failed, package: plugin.package, problem: `The storage controls of ${idText(plugin)} failed: ${failed}` };
   }
   if (twice.size === 0) return { controls };
   const ids = [...twice].map((id) => JSON.stringify(id)).join(", ");
@@ -3502,10 +3542,6 @@ async function runButton(core, button) {
   } catch (error) {
     core.log("blockr.dock").error(asError(error));
   }
-}
-function packageFromId(id) {
-  const at2 = id.indexOf("-");
-  return at2 < 0 ? id : id.slice(0, at2);
 }
 function distinct(list, twice) {
   const seen = /* @__PURE__ */ new Set();
@@ -4088,16 +4124,6 @@ function after(state, row) {
 
 // srcts/modules/dock/views-menu.tsx
 import { Fragment as Fragment5, jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
-var ACTIVATE_VIEW = "blockr.dock-activate_view";
-var ADD_VIEW = "blockr.dock-add_view";
-var ADD_FOLDER = "blockr.dock-add_folder";
-var RENAME_VIEW = "blockr.dock-rename_view";
-var RENAME_FOLDER = "blockr.dock-rename_folder";
-var REMOVE_VIEW = "blockr.dock-remove_view";
-var REMOVE_FOLDER = "blockr.dock-remove_folder";
-var MOVE_VIEW = "blockr.dock-move_view";
-var MOVE_FOLDER = "blockr.dock-move_folder";
-var SET_OPTION = "blockr.core-set_option";
 var EDGE2 = 24;
 var STEP = 8;
 function useViewTabs(core) {
@@ -4157,7 +4183,7 @@ function ViewsMenu({ state, openFolders, tabs }) {
       label: "Show views as tabs",
       checked: tabs,
       onSelect: () => {
-        runEdit(core, SET_OPTION, { id: "view_tabs", value: !tabs });
+        runEdit(core, core.id("blockr.core", "set_option"), { id: "view_tabs", value: !tabs });
       }
     }
   ];
@@ -4251,14 +4277,14 @@ function Manage({ anchor, keyboard, state, openFolders, onClose, onDone }) {
     setDrag(next);
   };
   const addView = () => {
-    void applied2(core, ADD_VIEW, {}).then((done) => {
+    void applied2(core, core.id("blockr.dock", "add_view"), {}).then((done) => {
       const added = done ? dockState(core.store.board())?.active : null;
       if (added !== void 0 && added !== null) setRenaming(keyOf({ view: added }));
     });
   };
   const addFolder = () => {
     const before2 = new Set(Object.keys(state.folders));
-    void applied2(core, ADD_FOLDER, {}).then((done) => {
+    void applied2(core, core.id("blockr.dock", "add_folder"), {}).then((done) => {
       const after2 = done ? Object.keys(dockState(core.store.board())?.folders ?? {}) : [];
       const added = after2.find((id) => !before2.has(id));
       if (added !== void 0) setRenaming(keyOf({ folder: added }));
@@ -4602,23 +4628,23 @@ async function applied2(core, id, args) {
   );
 }
 function activate(core, state, view2) {
-  if (view2 !== state.active) runEdit(core, ACTIVATE_VIEW, { view: view2 });
+  if (view2 !== state.active) runEdit(core, core.id("blockr.dock", "activate_view"), { view: view2 });
 }
 function rename(core, entry, name2) {
-  if ("view" in entry) runEdit(core, RENAME_VIEW, { view: entry.view, name: name2 });
-  else runEdit(core, RENAME_FOLDER, { folder: entry.folder, name: name2 });
+  if ("view" in entry) runEdit(core, core.id("blockr.dock", "rename_view"), { view: entry.view, name: name2 });
+  else runEdit(core, core.id("blockr.dock", "rename_folder"), { folder: entry.folder, name: name2 });
 }
 function remove(core, entry) {
-  if ("view" in entry) runEdit(core, REMOVE_VIEW, { view: entry.view });
-  else runEdit(core, REMOVE_FOLDER, { folder: entry.folder });
+  if ("view" in entry) runEdit(core, core.id("blockr.dock", "remove_view"), { view: entry.view });
+  else runEdit(core, core.id("blockr.dock", "remove_folder"), { folder: entry.folder });
 }
 function removable(core, entry) {
-  return "view" in entry ? core.commands.preflight(REMOVE_VIEW, { view: entry.view }) : core.commands.preflight(REMOVE_FOLDER, { folder: entry.folder });
+  return "view" in entry ? core.commands.preflight(core.id("blockr.dock", "remove_view"), { view: entry.view }) : core.commands.preflight(core.id("blockr.dock", "remove_folder"), { folder: entry.folder });
 }
 function move(core, openFolders, entry, drop) {
   const args = "view" in entry ? { view: entry.view, folder: drop.folder } : { folder: entry.folder, into: drop.folder };
   if (drop.before !== void 0) args.before = drop.before;
-  const id = "view" in entry ? MOVE_VIEW : MOVE_FOLDER;
+  const id = core.id("blockr.dock", "view" in entry ? "move_view" : "move_folder");
   if (!core.commands.preflight(id, args)) return;
   if (drop.folder !== null) openFolders.open([drop.folder]);
   runEdit(core, id, args);
@@ -4637,18 +4663,19 @@ function depthStyle(depth) {
 import { Fragment as Fragment6, jsx as jsx17, jsxs as jsxs11 } from "react/jsx-runtime";
 function PanelFrame({ params }) {
   const { panel: panel2 } = params;
-  return "block" in panel2 ? /* @__PURE__ */ jsx17("div", { className: "blockr-dock-panel", "data-block": panel2.block, children: /* @__PURE__ */ jsx17(BlockCard, { id: panel2.block }) }) : /* @__PURE__ */ jsx17(PluginFrame, { plugin: panel2.plugin });
+  return "block" in panel2 ? /* @__PURE__ */ jsx17("div", { className: "blockr-dock-panel", "data-block": panel2.block, children: /* @__PURE__ */ jsx17(BlockCard, { id: panel2.block }) }) : /* @__PURE__ */ jsx17(PluginFrame, { panel: panel2 });
 }
-function PluginFrame({ plugin }) {
+function PluginFrame({ panel: panel2 }) {
   const { core } = useDock();
+  const plugin = panelClass(core, panel2);
   const mount = useCallback5((el) => core.mountPlugin(el, plugin), [core, plugin]);
-  return /* @__PURE__ */ jsx17(Mounted, { mount, className: "blockr-dock-panel", data: { "data-plugin": plugin } });
+  return /* @__PURE__ */ jsx17(Mounted, { mount, className: "blockr-dock-panel", data: { "data-plugin": idText(plugin) } });
 }
 var components = { [PANEL_COMPONENT]: PanelFrame };
 function Tab(props) {
   const { core } = useDock();
   const { panel: panel2 } = props.params;
-  if ("plugin" in panel2) return /* @__PURE__ */ jsx17(PluginTab, { ...props, plugin: panel2.plugin });
+  if ("plugin" in panel2) return /* @__PURE__ */ jsx17(PluginTab, { ...props, plugin: panelClass(core, panel2) });
   return /* @__PURE__ */ jsx17(
     DockviewDefaultTab,
     {
@@ -4693,15 +4720,17 @@ function AddPanelButton({ api: api2, group }) {
   if (api2.location.type === "edge") return null;
   return /* @__PURE__ */ jsx17("div", { className: "blockr-dock-add-slot", children: /* @__PURE__ */ jsx17(Button2, { variant: "quiet", className: "blockr-dock-add", "aria-label": "Add panel", ...button, children: /* @__PURE__ */ jsx17("svg", { viewBox: "0 0 16 16", width: "16", height: "16", "aria-hidden": "true", focusable: "false", children: /* @__PURE__ */ jsx17("path", { d: "M8 3v10M3 8h10", fill: "none", stroke: "currentColor", strokeWidth: "1.5", strokeLinecap: "round" }) }) }) });
 }
-function showsNothing(board, drawn) {
+function showsNothing(core, board, drawn) {
   const view2 = activeView(board);
   if (view2 === void 0) return false;
-  return !gridPanels(view2.grid).some((panel2) => "block" in panel2 ? Object.hasOwn(board.blocks, panel2.block) : drawn.has(panel2.plugin));
+  return !gridPanels(view2.grid).some(
+    (panel2) => "block" in panel2 ? Object.hasOwn(board.blocks, panel2.block) : drawn.has(panelClass(core, panel2))
+  );
 }
 function EmptyView() {
   const { core, drawn } = useDock();
   const board = useBoard4(core);
-  if (!showsNothing(board, drawn)) return null;
+  if (!showsNothing(core, board, drawn)) return null;
   if (!core.lock.board) return /* @__PURE__ */ jsx17(EmptyPrompt, {});
   return /* @__PURE__ */ jsxs11("div", { className: "blockr-dock-empty", children: [
     /* @__PURE__ */ jsx17(LockIcon2, { size: 32 }),
@@ -4796,7 +4825,6 @@ function readList(list, read, where) {
 }
 function readItem(sent) {
   const { kind, id } = common(sent);
-  const field = (name2) => text(sent, id, name2);
   switch (kind) {
     case "part":
       if (!isPart(id)) {
@@ -4806,7 +4834,7 @@ function readItem(sent) {
     case "storage":
       return { kind, id };
     case "module":
-      return { kind, id, module: field("module") };
+      return { kind, id, module: moduleOf(sent, id) };
     case "link":
     case "menu":
       return readEntry(sent);
@@ -4839,6 +4867,15 @@ function text(sent, id, name2) {
     throw new TypeError(`The ${name2} of the navbar item ${JSON.stringify(id)} is ${JSON.stringify(value)}, where the dock takes a non-empty string.`);
   }
   return value;
+}
+function moduleOf(sent, id) {
+  const value = isObject(sent) ? sent.module : void 0;
+  if (!isIdRecord(value) || value.package === "" || value.id === "") {
+    throw new TypeError(
+      `The module of the navbar item ${JSON.stringify(id)} is ${JSON.stringify(value)}, where the dock takes the package and the id of a module, as { "package": "blockr.test", "id": "deck_button" }.`
+    );
+  }
+  return { package: value.package, id: value.id };
 }
 function isPart(id) {
   return PARTS.includes(id);
@@ -4932,7 +4969,7 @@ function BoardName() {
         label: "Board name",
         className: "blockr-dock-bar-field",
         onSubmit: (name2) => {
-          core.commands.run("blockr.core-change_board", { name: name2 }).catch(() => void 0);
+          core.commands.run(core.id("blockr.core", "change_board"), { name: name2 }).catch(() => void 0);
         },
         onDone: () => {
           setRenaming(false);
@@ -5115,7 +5152,7 @@ function ModuleSlot({ item }) {
     const gone = () => signal.aborted;
     let cleanup;
     const draw = async () => {
-      const mod = navbarModule(await core.module(item.module));
+      const mod = navbarModule(await core.module(core.id(item.module.package, item.module.id)));
       if (gone()) return;
       const done = await mod.render({ el, core, signal });
       if (gone()) done?.();
@@ -5123,7 +5160,7 @@ function ModuleSlot({ item }) {
     };
     draw().catch((error) => {
       if (gone()) return;
-      const message = `The module ${item.module} of the navbar item "${item.id}" cannot draw: ${errorMessage(error)}`;
+      const message = `The navbar item "${item.id}" cannot draw its module ${idText(item.module)}: ${errorMessage(error)}`;
       core.log("blockr.dock").error(new Error(message, { cause: error }));
       setFailure(message);
     });
@@ -5137,7 +5174,7 @@ function ModuleSlot({ item }) {
     };
   }, [core, item.id, item.module]);
   if (failure !== void 0) return /* @__PURE__ */ jsx19(Warning, { message: failure });
-  return /* @__PURE__ */ jsx19("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": item.module });
+  return /* @__PURE__ */ jsx19("span", { ref: ref2, className: "blockr-dock-bar-module", "data-module": idText(item.module) });
 }
 function navbarModule(exports) {
   if (!isObject(exports) || typeof exports.api !== "number") {
@@ -5450,7 +5487,7 @@ function OptionLine({ option, reset }) {
         render: withAttributes({ title: "Reset to the default" }),
         onPress: () => {
           line.current?.querySelector(".blockr-dock-sidebar-option-ui")?.querySelector(FOCUSABLE)?.focus();
-          runEdit(core, "blockr.core-set_option", { id: option, value: reset });
+          runEdit(core, core.id("blockr.core", "set_option"), { id: option, value: reset });
         },
         children: "Reset"
       }
@@ -5629,7 +5666,7 @@ var PAGE_NAME = "Page";
 function startingPatches(board, drawn, view2) {
   const state = dockState(board);
   if (state === void 0) return [];
-  const at2 = (...segments) => pointer(["plugins", DOCK, ...segments]);
+  const at2 = (...segments) => pointer(["plugins", DOCK.package, DOCK.id, ...segments]);
   const patches = [];
   const added = Object.keys(state.views).length === 0;
   let views = state.views;
@@ -5638,7 +5675,7 @@ function startingPatches(board, drawn, view2) {
     patches.push({ op: "add", path: at2("views", PAGE_ID), value: page });
     views = { [PAGE_ID]: page };
   }
-  const draws = (panel2) => "block" in panel2 || drawn.includes(panel2.plugin);
+  const draws = (panel2) => "block" in panel2 || drawn.some((plugin) => sameId(plugin, panel2.plugin));
   for (const [id, held] of Object.entries(state.views)) {
     if (gridPanels(held.grid).every(draws)) continue;
     patches.push({ op: "replace", path: at2("views", id, "grid"), value: prunePanels(held.grid, draws) });
@@ -5663,7 +5700,7 @@ function startingGrid(board, drawn) {
 function drawnPlugins(core) {
   const plugins = core.plugins.appPlugins();
   return new Map(
-    Object.entries(plugins).flatMap(([id, plugin]) => core.plugins.pluginClass(id).ui === void 0 ? [] : [[id, plugin.name]])
+    [...plugins].flatMap(([id, plugin]) => core.plugins.pluginClass(id).ui === void 0 ? [] : [[id, plugin.name]])
   );
 }
 function urlView(location) {
@@ -5788,7 +5825,7 @@ function createToasts(core, drawn) {
 function concerned(about, core, board) {
   if (about === void 0) return "Board";
   if ("option" in about) return `Board option "${own(core.options.registered(), about.option)?.label ?? about.option}"`;
-  if ("plugin" in about) return `Plugin "${own(core.plugins.appPlugins(), about.plugin)?.name ?? about.plugin}"`;
+  if ("plugin" in about) return `Plugin "${core.plugins.appPlugins().get(about.plugin)?.name ?? idText(about.plugin)}"`;
   if ("stack" in about) return `Stack "${own(board.stacks, about.stack)?.name ?? about.stack}"`;
   const block = (id) => `"${own(board.blocks, id)?.name ?? id}"`;
   if ("block" in about) return `Block ${block(about.block)}`;
@@ -5801,19 +5838,18 @@ function sourcePackage(notification) {
 function own(record, key) {
   return Object.hasOwn(record, key) ? record[key] : void 0;
 }
-var ACTIVATE_VIEW2 = "blockr.dock-activate_view";
-var SHOW_PANEL = "blockr.dock-show_panel";
-function panelShowing(board, plugin, commands) {
+function panelShowing(board, plugin, core) {
   const state = dockState(board);
   if (state === void 0) return void 0;
   const panel2 = { plugin };
-  const show = { id: SHOW_PANEL, args: { panel: panel2 } };
+  const showPanel = core.id("blockr.dock", "show_panel");
+  const show = { id: showPanel, args: { panel: panel2 } };
   const view2 = viewOrder(state).find((id) => {
     const held = state.views[id];
     return held !== void 0 && places(held.grid, panel2);
   });
-  if (view2 === void 0) return commands.preflight(SHOW_PANEL, { panel: panel2 }) ? [show] : void 0;
-  return view2 === state.active ? [show] : [{ id: ACTIVATE_VIEW2, args: { view: view2 } }, show];
+  if (view2 === void 0) return core.commands.preflight(showPanel, { panel: panel2 }) ? [show] : void 0;
+  return view2 === state.active ? [show] : [{ id: core.id("blockr.dock", "activate_view"), args: { view: view2 } }, show];
 }
 function ToastList({ core, toasts, drawn }) {
   const list = useSyncExternalStore5(toasts.subscribe, toasts.list);
@@ -5821,7 +5857,7 @@ function ToastList({ core, toasts, drawn }) {
   if (list.length === 0) return null;
   return /* @__PURE__ */ jsx21("section", { className: "blockr-dock-toasts", "aria-label": "Notifications", children: list.map((toast) => {
     const plugin = panelPlugin(toast.notification, drawn);
-    const showing2 = plugin === void 0 ? void 0 : panelShowing(board, plugin, core.commands);
+    const showing2 = plugin === void 0 ? void 0 : panelShowing(board, plugin, core);
     return /* @__PURE__ */ jsx21(
       ToastItem,
       {
@@ -5893,7 +5929,6 @@ function ToastItem({ toast, title, toasts, show }) {
 // srcts/modules/dock/index.tsx
 import { Fragment as Fragment7, jsx as jsx22, jsxs as jsxs15 } from "react/jsx-runtime";
 var api = API;
-var SHOW_PANEL2 = "blockr.dock-show_panel";
 var frontend = {
   async render({ el, core, plugin, signal, args }) {
     const items = readNavbar(args);
@@ -5942,9 +5977,10 @@ var frontend = {
     };
   },
   async show({ object: object2, core }) {
-    const args = { panel: object2 };
-    if (!core.commands.preflight(SHOW_PANEL2, args)) return;
-    await core.commands.run(SHOW_PANEL2, args);
+    const panel2 = object2;
+    const show = core.id("blockr.dock", "show_panel");
+    if (!core.commands.preflight(show, { panel: panel2 })) return;
+    await core.commands.run(show, { panel: panel2 });
   }
 };
 var dock_default = {

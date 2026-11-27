@@ -8,14 +8,19 @@
 \usage{
 blk(id)
 
-plg(id)
+plg(id, package = NULL)
 
 is_panel_ref(x)
 }
 \arguments{
 \item{id}{For \code{blk()}, the id of a block.
 For \code{plg()}, the name of a plugin in the \code{plugins} of
-\code{\link[blockr.core:new_board]{blockr.core::new_board()}}, or the id of a plugin's class.}
+\code{\link[blockr.core:new_board]{blockr.core::new_board()}}, or the id of a plugin's class within its
+package.}
+
+\item{package}{For \code{plg()}, the package of the plugin's class, as
+\code{\link[blockr.core:available_plugins]{blockr.core::available_plugins()}} gives it in \code{package}, or \code{NULL} where
+\code{id} is the name of a plugin.}
 
 \item{x}{An object.}
 }
@@ -29,21 +34,22 @@ names each panel by a panel reference (see \code{\link[=dock_grid]{dock_grid()}}
 The function \code{blk()} names the panel of a block, by the block's id.
 The function \code{plg()} names the panel of a plugin, by the name that the app
 script gives the plugin in the \code{plugins} of \code{\link[blockr.core:new_board]{blockr.core::new_board()}}, or
-else by the id of the plugin's class, as \code{"blockr.core-edit_board_plugin"}.
+else by the plugin's class: the class's id, with its package in \code{package},
+as \code{plg("edit_board_plugin", package = "blockr.core")}.
 A bare id names a panel too, that of the block of that id.
 }
 \details{
-The dock refuses no id of a plugin class, since such an id may name the
-class of a plugin that \code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
-As \code{new_board()} builds the board, it refuses a \code{plg()} that names neither
-a plugin class nor a plugin in the board's \code{plugins} (see \code{\link[=board_views]{board_views()}}).
+The dock refuses no plugin class, since a class may be that of a plugin
+that \code{\link[blockr.core:serve]{blockr.core::serve()}} adds to the app.
+As \code{new_board()} builds the board, it refuses a \code{plg()} without a package
+that names no plugin in the board's \code{plugins} (see \code{\link[=board_views]{board_views()}}).
 As the dock starts, it drops the panel of a plugin that the app does not
 run.
 }
 \examples{
 blk("a")
 plg("edit")
-plg("blockr.core-edit_board_plugin")
+plg("edit_board_plugin", package = "blockr.core")
 
 dock_grid(blk("a"), "b", rail(plg("edit")))
 
