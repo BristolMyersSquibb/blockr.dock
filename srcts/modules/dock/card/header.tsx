@@ -12,7 +12,7 @@
 //    name, Escape keeps the name, and an empty name, or one of spaces alone,
 //    is refused on Enter and dropped on a click elsewhere.
 // 3. The Controls toggle, once the block's UI has drawn anything, the
-//    Preview toggle and the padlock, each a bare 26px tool with its name as
+//    Preview toggle and the padlock, each a bare 24px tool with its name as
 //    its tooltip and label.
 //    A toggle runs blockr.dock-set_sections with the block's new set of
 //    sections, and is pressed while its section shows.

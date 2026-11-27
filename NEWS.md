@@ -14,6 +14,10 @@
   `dark_mode` sets.
   Secondary and disabled text take the one muted grey, a disabled button draws
   at half its opacity, and the logo takes the brand colour, `primary`.
+  Each padding, margin and gap, and the height of each control and row, is a
+  multiple of the unit `--bk-spacing`, out of a few steps that fold sizes a
+  pixel or two apart: at the default unit, the rows of a menu are 32 pixels
+  high, the icon buttons 24 and the badges 20.
 
 * The panel picker and the "+" menu of a card draw with core's React SDK
   (#630).

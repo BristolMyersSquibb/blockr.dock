@@ -586,7 +586,7 @@ describe("the line of tabs", () => {
 });
 
 // Has each row of the menu in manage mode sit 34 pixels below the one before,
-// from the top of the window, as a browser lays them out, which happy-dom
+// from the top of the window, as a browser stacks them, which happy-dom
 // does not.
 function stackRows(menu: HTMLElement): void {
   menu.querySelectorAll<HTMLElement>(".blockr-dock-views-managed").forEach((managedRow, i) => {

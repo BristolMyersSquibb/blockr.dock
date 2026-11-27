@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import type { CoreApi, JsonBoard, PluginModule } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
 import { themeVariables } from "@blockr/ui/build";
+import { themeLightSpaced } from "dockview-react";
 import { act } from "react";
 import { flushSync } from "react-dom";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
@@ -1264,10 +1265,63 @@ describe("the dock's stylesheet", () => {
       // The mark sizes its icon, SVG markup sized in em, by its font size,
       // which stays in pixels, as the mark's own sizes do.
       if (property === "font-size" && !selector.includes(".blockr-card-mark")) {
-        expect(value, at).toMatch(/var\(--bk-text-(?:xs|sm|base|lg)\)/);
+        expect(value, at).toMatch(/^var\(--bk-text-(?:xs|sm|base|lg)\)$/);
       }
       // A pill and a dot keep their round ends under any radius.
       if (property.endsWith("radius") && !["50%", "999px"].includes(value)) expect(value, at).toMatch(/var\(--bk-radius\)/);
+    }
+  });
+
+  // The multiples of the unit, --bk-spacing, that the stylesheet takes: those
+  // of its paddings, margins, gaps and offsets, those of the heights of its
+  // controls and rows, and the heights of the bar, of the line of tabs under
+  // it and of both, which the dock's root, the narrow column and the sidebar's
+  // header make room for or match.
+  const SPACING = [0.5, 1, 1.5, 2, 2.5, 3, 4, 8];
+  const HEIGHTS = [5, 6, 7.5, 8];
+  const FRAME = [10, 12, 22];
+
+  test("puts each padding, margin, gap and offset on a listed multiple of --bk-spacing, and each height of a control or a row on a listed height", () => {
+    const sizes = /^(?:min-)?(?:height|width)$|^line-height$/;
+    const reads = OWN.flatMap(({ selector, property, value }) => {
+      const at = `${selector} { ${property}: ${value} }`;
+      // Each read of the unit multiplies it, so that the test sees each multiple.
+      expect(value.match(/var\(--bk-spacing\)/g)?.length ?? 0, at).toBe(value.match(/var\(--bk-spacing\) \* -?[\d.]+/g)?.length ?? 0);
+      return [...value.matchAll(/var\(--bk-spacing\) \* (-?[\d.]+)/g)].map(([, n = ""]) => ({ at, property, n: Math.abs(Number(n)) }));
+    });
+    expect(reads.length).toBeGreaterThan(100);
+    for (const { at, property, n } of reads) {
+      expect(sizes.test(property) ? [...HEIGHTS, ...FRAME] : [...SPACING, ...FRAME], at).toContain(n);
+    }
+  });
+
+  test("keeps pixels in no padding, margin, gap or height but those of the drawings, the hairlines and the offsets that blockr.ui and dockview take in pixels", () => {
+    const spacing = /^(?:padding|margin|gap|row-gap|column-gap)(?:-[\w-]+)?$/;
+    const heights = /^(?:min-)?height$/;
+    // Where pixels stay: the margin of what only a screen reader hears, the
+    // offsets of a menu from its button, as blockr.ui's popovers take theirs
+    // in script, the room that the narrow column makes for the pinned
+    // sidebar, whose width stays in pixels, and dockview's margin between a
+    // tab's name and its close button, which a rail's tab moves.
+    const offsets = [
+      ".blockr-dock-visually-hidden",
+      ".blockr-dock-menu",
+      '.blockr-dock-menu:not([data-depth="0"])',
+      '.blockr-dock[data-layout="narrow"][data-pushed]',
+      ".blockr-dock .dv-tabs-container-vertical .dv-default-tab-content",
+    ];
+    // The drawings, whose heights stay in pixels: the marks, the dots, the
+    // line where a drag would land, a rule, and the output, at whose height
+    // a plot is drawn.
+    const drawings = /\.blockr-card-mark|\.blockr-card-dot|::before|::after|\.blockr-dock-visually-hidden|\.blockr-dock-menu-divider|^\.blockr-card-output$/;
+    for (const { selector, property, value } of OWN) {
+      const at = `${selector} { ${property}: ${value} }`;
+      // A hairline: the 1px edge of a field, which the margin of its frame
+      // pulls back with its padding, or the 1px rule between a card's
+      // sections, which the outputs' padding makes room for.
+      const pixels = value.replace(/ [+-] 1px\)/g, ")").match(/-?[\d.]+(?:px|rem)\b/g) ?? [];
+      if (spacing.test(property) && !offsets.includes(selector)) expect(pixels, at).toEqual([]);
+      if (heights.test(property) && !drawings.test(selector)) expect(pixels, at).toEqual([]);
     }
   });
 
@@ -1326,6 +1380,22 @@ describe("the bridge from the theme variables to dockview's theme", () => {
     expect(bridged.get("--dv-group-view-background-color")).toBe("var(--bk-color-background)");
     expect(bridged.get("--dv-tabs-and-actions-container-background-color")).toBe("var(--bk-color-card)");
     expect(bridged.get("--dv-border-radius")).toBe("calc(var(--bk-radius) * 1.4)");
+  });
+
+  test("sizes the text of the tabs and the headers from the theme variables, and leaves the spacing to dockview, whose script sizes the gaps between groups and a collapsed rail in pixels", () => {
+    // Dockview's sizes of text, 12px and 13px, are those of the two steps at
+    // the defaults.
+    expect(light.get("--dv-tab-font-size")).toBe("12px");
+    expect(bridged.get("--dv-tab-font-size")).toBe("var(--bk-text-xs)");
+    expect(light.get("--dv-tabs-and-actions-container-font-size")).toBe("13px");
+    expect(bridged.get("--dv-tabs-and-actions-container-font-size")).toBe("var(--bk-text-sm)");
+    // The theme object hands dockview's script the gap between groups and the
+    // size of a collapsed rail, which match the room around the groups and the
+    // height of a group's header in its stylesheet.
+    expect(`${String(themeLightSpaced.gap)}px`).toBe(light.get("--dv-spacing-padding"));
+    expect(`${String(themeLightSpaced.edgeGroupCollapsedSize)}px`).toBe(light.get("--dv-tabs-and-actions-container-height"));
+    const spacing = ["--dv-spacing-padding", "--dv-tabs-and-actions-container-height", "--dv-tab-margin", "--dv-tab-margin-block", "--dv-tab-margin-inline"];
+    expect(spacing.filter((name) => bridged.has(name))).toEqual([]);
   });
 });
 
@@ -1595,8 +1665,8 @@ describe("the stylesheet of the dot on a plugin's tab", () => {
   );
   const dot = ".dv-default-tab-content::before";
 
-  test("puts the dot before the plugin's name, 6px from it, so that the name keeps it apart from the close button", () => {
-    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-end")).toBe("6px");
+  test("puts the dot before the plugin's name, 1.5 units of the spacing from it, so that the name keeps it apart from the close button", () => {
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-end")).toBe("calc(var(--bk-spacing) * 1.5)");
     expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-start")).toBeUndefined();
   });
 

@@ -2,12 +2,12 @@
 
 /* srcts/modules/dock/card/card.css */
 .blockr-card {
-  --blockr-card-inset: 16px;
+  --blockr-card-inset: calc(var(--bk-spacing) * 4);
   --blockr-card-focus-ring: 0 0 0 3px color-mix(in oklab, var(--bk-color-ring) 12%, transparent);
   box-sizing: border-box;
   min-height: 100%;
   min-width: 0;
-  padding: var(--blockr-card-inset, 16px);
+  padding: var(--blockr-card-inset);
   overflow-wrap: break-word;
   background: var(--bk-color-card);
   color: var(--bk-color-card-foreground);
@@ -18,8 +18,8 @@
 .blockr-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 32px;
+  gap: calc(var(--bk-spacing) * 2.5);
+  min-height: calc(var(--bk-spacing) * 8);
 }
 .blockr-card-mark {
   position: relative;
@@ -109,7 +109,7 @@
   position: relative;
   flex-grow: 1;
   min-width: 0;
-  padding-right: 8px;
+  padding-right: calc(var(--bk-spacing) * 2);
 }
 .blockr-card-name {
   display: -webkit-box;
@@ -117,8 +117,8 @@
   -webkit-line-clamp: 2;
   max-width: 100%;
   box-sizing: border-box;
-  margin: -4px -8px;
-  padding: 4px 8px;
+  margin: calc(var(--bk-spacing) * -1) calc(var(--bk-spacing) * -2);
+  padding: calc(var(--bk-spacing) * 1) calc(var(--bk-spacing) * 2);
   overflow: hidden;
   overflow-wrap: anywhere;
   border-radius: calc(var(--bk-radius) * 0.8);
@@ -136,14 +136,15 @@
   color: var(--bk-color-accent-foreground);
 }
 .blockr-card-name-edit {
-  margin: -5px 0 -5px -9px;
+  margin-block: calc(var(--bk-spacing) * -1 - 1px);
+  margin-inline: calc(var(--bk-spacing) * -2 - 1px) 0;
 }
 .blockr-card-name-field {
   display: block;
   box-sizing: border-box;
   width: 100%;
   margin: 0;
-  padding: 4px 8px;
+  padding: calc(var(--bk-spacing) * 1) calc(var(--bk-spacing) * 2);
   border: 1px solid var(--bk-color-ring);
   border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
@@ -159,7 +160,7 @@
   border-color: var(--bk-color-destructive);
 }
 .blockr-card-name-error {
-  margin-top: 4px;
+  margin-top: calc(var(--bk-spacing) * 1);
   font-size: var(--bk-text-xs);
   color: var(--bk-color-destructive-text);
   white-space: nowrap;
@@ -168,14 +169,14 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 2px;
+  gap: calc(var(--bk-spacing) * 0.5);
 }
 .blockr-card-tool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: calc(var(--bk-spacing) * 6);
+  height: calc(var(--bk-spacing) * 6);
   margin: 0;
   padding: 0;
   border: 0;
@@ -205,7 +206,7 @@
   fill: var(--bk-color-popover);
 }
 .blockr-card-sections {
-  margin-top: 12px;
+  margin-top: calc(var(--bk-spacing) * 3);
 }
 .blockr-card-section {
   display: grid;
@@ -222,15 +223,15 @@
   min-width: 0;
 }
 .blockr-card-section[data-section=outputs] {
-  margin: 0 calc(-1 * var(--blockr-card-inset, 16px));
+  margin: 0 calc(-1 * var(--blockr-card-inset));
 }
 .blockr-card-section[data-section=outputs] > .blockr-card-section-body {
-  padding: 0 var(--blockr-card-inset, 16px);
+  padding: 0 var(--blockr-card-inset);
   overflow-x: auto;
 }
 .blockr-card-section[data-section=inputs][data-open=true] + .blockr-card-section[data-section=outputs] > .blockr-card-section-body {
-  padding-top: 33px;
-  background: linear-gradient(var(--bk-color-border), var(--bk-color-border)) 0 16px / 100% 1px no-repeat;
+  padding-top: calc(var(--blockr-card-inset) * 2 + 1px);
+  background: linear-gradient(var(--bk-color-border), var(--bk-color-border)) 0 var(--blockr-card-inset) / 100% 1px no-repeat;
 }
 .blockr-card-section[data-folding] > .blockr-card-section-body {
   overflow: hidden;
@@ -249,7 +250,7 @@
 }
 .blockr-card-status-note {
   margin: 0;
-  padding: 28px 0 32px;
+  padding: calc(var(--bk-spacing) * 8) 0;
   font-size: var(--bk-text-sm);
   font-style: italic;
   line-height: 1.5;
@@ -257,16 +258,16 @@
 }
 .blockr-card-notifications {
   display: grid;
-  gap: 8px;
+  gap: calc(var(--bk-spacing) * 2);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .blockr-card-header + .blockr-card-notifications {
-  margin-top: 12px;
+  margin-top: calc(var(--bk-spacing) * 3);
 }
 .blockr-card-notification {
-  padding: 8px 12px;
+  padding: calc(var(--bk-spacing) * 2) calc(var(--bk-spacing) * 3);
   border: 1px solid var(--bk-color-border);
   border-radius: calc(var(--bk-radius) * 0.8);
   background: var(--bk-color-muted);
@@ -287,13 +288,13 @@
   color: var(--bk-color-warning-text);
 }
 .blockr-card-messages {
-  margin-top: 12px;
+  margin-top: calc(var(--bk-spacing) * 3);
 }
 .blockr-card-messages-count {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: calc(var(--bk-spacing) * 2) calc(var(--bk-spacing) * 3);
   border-radius: calc(var(--bk-radius) * 0.8);
   list-style: none;
   font-size: var(--bk-text-sm);
@@ -315,11 +316,11 @@
   transform: rotate(180deg);
 }
 .blockr-card-messages > .blockr-card-notifications {
-  padding-top: 8px;
+  padding-top: calc(var(--bk-spacing) * 2);
 }
 .blockr-card[data-compact] .blockr-card-header {
-  gap: 8px;
-  min-height: 26px;
+  gap: calc(var(--bk-spacing) * 2);
+  min-height: calc(var(--bk-spacing) * 6);
 }
 .blockr-card[data-compact] .blockr-card-header .blockr-card-mark {
   width: 20px;
@@ -329,9 +330,9 @@
 }
 .blockr-card[data-compact] .blockr-card-name {
   display: block;
-  margin: -2px -6px;
-  padding: 2px 6px;
-  font-size: calc(var(--bk-text-xs) * 11 / 12);
+  margin: calc(var(--bk-spacing) * -0.5) calc(var(--bk-spacing) * -1.5);
+  padding: calc(var(--bk-spacing) * 0.5) calc(var(--bk-spacing) * 1.5);
+  font-size: var(--bk-text-xs);
   letter-spacing: 0.06em;
   text-overflow: ellipsis;
   text-transform: uppercase;
@@ -339,20 +340,21 @@
   color: var(--bk-color-muted-foreground);
 }
 .blockr-card[data-compact] .blockr-card-name-edit {
-  margin: -3px 0 -3px -7px;
+  margin-block: calc(var(--bk-spacing) * -0.5 - 1px);
+  margin-inline: calc(var(--bk-spacing) * -1.5 - 1px) 0;
 }
 .blockr-card[data-compact] .blockr-card-name-field {
-  padding: 2px 6px;
+  padding: calc(var(--bk-spacing) * 0.5) calc(var(--bk-spacing) * 1.5);
   font-size: var(--bk-text-sm);
 }
 .blockr-card[data-compact] .blockr-card-header + .blockr-card-notifications,
 .blockr-card[data-compact] .blockr-card-sections {
-  margin-top: 6px;
+  margin-top: calc(var(--bk-spacing) * 1.5);
 }
 .blockr-card-menu .blockr-card-menu-meta {
   grid-column: 2;
   grid-row: 1;
-  padding-left: 16px;
+  padding-left: calc(var(--bk-spacing) * 4);
   color: var(--bk-color-muted-foreground);
   font-family: var(--bk-font-mono);
   font-size: var(--bk-text-sm);
@@ -361,13 +363,13 @@
   color: inherit;
 }
 .blockr-card-menu-divided {
-  padding-top: 4px;
+  padding-top: calc(var(--bk-spacing) * 1);
   border-top: 1px solid var(--bk-color-border);
 }
 .blockr-card-menu-lead {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(var(--bk-spacing) * 2);
 }
 .blockr-card-menu-lead svg {
   flex: none;
@@ -387,7 +389,7 @@
   pointer-events: none;
   box-sizing: border-box;
   max-width: 320px;
-  padding: 5px 9px;
+  padding: calc(var(--bk-spacing) * 1) calc(var(--bk-spacing) * 2);
   border: 1px solid var(--bk-color-border);
   border-radius: var(--bk-radius);
   background: var(--bk-color-popover);
@@ -398,22 +400,23 @@
   overflow-wrap: anywhere;
 }
 .blockr-card-tooltip-line + .blockr-card-tooltip-line {
-  margin-top: 2px;
+  margin-top: calc(var(--bk-spacing) * 0.5);
 }
 .blockr-card-tooltip-line[data-muted] {
   color: var(--bk-color-muted-foreground);
 }
 .blockr-card-tooltip-badge {
   display: inline-flex;
+  box-sizing: border-box;
   align-items: center;
-  height: 18px;
-  margin-left: 2px;
-  padding: 0 7px;
+  height: calc(var(--bk-spacing) * 5);
+  margin-left: calc(var(--bk-spacing) * 0.5);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 1px solid var(--bk-color-border);
   border-radius: 999px;
   background: var(--bk-color-muted);
   color: var(--bk-color-muted-foreground);
-  font-size: calc(var(--bk-text-xs) * 11 / 12);
+  font-size: var(--bk-text-xs);
   font-weight: 500;
   vertical-align: middle;
 }
@@ -421,7 +424,7 @@
 /* srcts/modules/dock/index.css */
 .blockr-dock {
   position: fixed;
-  inset: 48px 0 0;
+  inset: calc(var(--bk-spacing) * 12) 0 0;
 }
 .blockr-dock,
 .blockr-dock-bar,
@@ -435,14 +438,14 @@
 .blockr-dock[data-layout=narrow] {
   position: relative;
   inset: auto;
-  margin-top: 48px;
+  margin-top: calc(var(--bk-spacing) * 12);
 }
 .blockr-dock[data-tabs] {
-  top: 87px;
+  top: calc(var(--bk-spacing) * 22);
 }
 .blockr-dock[data-tabs][data-layout=narrow] {
   top: auto;
-  margin-top: 87px;
+  margin-top: calc(var(--bk-spacing) * 22);
 }
 .blockr-dock-panel {
   height: 100%;
@@ -452,14 +455,14 @@
   display: flex;
   align-items: center;
   height: 100%;
-  padding: 0 4px;
+  padding: 0 calc(var(--bk-spacing) * 1);
 }
 .blockr-dock-add {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: calc(var(--bk-spacing) * 6);
+  height: calc(var(--bk-spacing) * 6);
   padding: 0;
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.8);
@@ -484,7 +487,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: calc(var(--bk-spacing) * 3);
   color: var(--bk-color-muted-foreground);
   font-size: var(--bk-text-sm);
 }
@@ -492,7 +495,7 @@
   margin: 0;
 }
 .blockr-dock-empty-add {
-  padding: 4px 12px;
+  padding: calc(var(--bk-spacing) * 1) calc(var(--bk-spacing) * 3);
   border: 1px solid var(--bk-color-primary);
   border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
@@ -514,7 +517,7 @@
   max-width: min(320px, calc(100vw - 16px));
   max-height: min(320px, calc(100vh - 16px));
   overflow-y: auto;
-  padding: 6px;
+  padding: calc(var(--bk-spacing) * 1);
   border: 1px solid var(--bk-color-border);
   border-radius: var(--bk-radius);
   background: var(--bk-color-popover);
@@ -556,12 +559,13 @@
 .blockr-dock-menu-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(var(--bk-spacing) * 2);
   box-sizing: border-box;
   width: 100%;
-  min-height: 34px;
+  min-height: calc(var(--bk-spacing) * 8);
   margin: 0;
-  padding: 7px 10px 7px calc(10px + var(--depth, 0) * 16px);
+  padding: calc(var(--bk-spacing) * 1.5) calc(var(--bk-spacing) * 2.5);
+  padding-left: calc(var(--bk-spacing) * 2.5 + var(--depth, 0) * var(--bk-spacing) * 4);
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
@@ -610,8 +614,8 @@
 .blockr-dock-menu-status {
   display: flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 10px;
+  min-height: calc(var(--bk-spacing) * 8);
+  padding: 0 calc(var(--bk-spacing) * 2.5);
   color: var(--bk-color-muted-foreground);
   font-size: var(--bk-text-sm);
 }
@@ -641,21 +645,21 @@
 }
 .blockr-dock-menu-meta {
   flex-shrink: 0;
-  margin-left: 12px;
-  padding-left: 16px;
+  margin-left: calc(var(--bk-spacing) * 3);
+  padding-left: calc(var(--bk-spacing) * 4);
   color: var(--bk-color-muted-foreground);
   font-family: var(--bk-font-mono);
   font-size: var(--bk-text-sm);
 }
 .blockr-dock-menu-divider {
   height: 1px;
-  margin: 6px -6px;
+  margin: calc(var(--bk-spacing) * 1.5) calc(var(--bk-spacing) * -1);
   border: 0;
   background: var(--bk-color-border);
 }
 .blockr-dock-menu-note {
   margin: 0;
-  padding: 10px;
+  padding: calc(var(--bk-spacing) * 2) calc(var(--bk-spacing) * 2.5);
   color: var(--bk-color-muted-foreground);
   font-style: italic;
   text-align: center;
@@ -663,16 +667,16 @@
 .blockr-dock-picker {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: calc(var(--bk-spacing) * 1.5);
   box-sizing: border-box;
   min-width: 180px;
   max-width: min(320px, calc(100vw - 16px));
-  padding: 6px;
+  padding: calc(var(--bk-spacing) * 1.5);
 }
 .blockr-dock-picker-caption {
   flex: none;
   margin: 0;
-  padding: 0 4px;
+  padding: 0 calc(var(--bk-spacing) * 1);
   overflow: hidden;
   color: var(--bk-color-muted-foreground);
   font-size: var(--bk-text-xs);
@@ -691,7 +695,7 @@
 .blockr-dock-picker-name {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: calc(var(--bk-spacing) * 2);
   min-width: 0;
 }
 .blockr-dock-picker-lead {
@@ -713,19 +717,20 @@
 }
 .blockr-dock-picker-badge {
   display: inline-flex;
+  box-sizing: border-box;
   align-items: center;
-  height: 18px;
-  padding: 0 7px;
+  height: calc(var(--bk-spacing) * 5);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 1px solid var(--bk-color-border);
   border-radius: 999px;
   background: var(--bk-color-muted);
   color: var(--bk-color-muted-foreground);
-  font-size: calc(var(--bk-text-xs) * 11 / 12);
+  font-size: var(--bk-text-xs);
   font-weight: 500;
 }
 .blockr-dock-picker-note {
   margin: 0;
-  padding: 10px;
+  padding: calc(var(--bk-spacing) * 2) calc(var(--bk-spacing) * 2.5);
   color: var(--bk-color-muted-foreground);
   font-style: italic;
   text-align: center;
@@ -747,6 +752,8 @@
   --dv-active-sash-color: var(--bk-color-primary);
   --dv-border-radius: calc(var(--bk-radius) * 1.4);
   --dv-tab-border-radius: var(--bk-radius);
+  --dv-tabs-and-actions-container-font-size: var(--bk-text-sm);
+  --dv-tab-font-size: var(--bk-text-xs);
   --dv-scrollbar-background-color: color-mix(in oklab, var(--bk-color-foreground) 25%, transparent);
   --dv-icon-hover-background-color: var(--bk-color-accent);
 }
@@ -766,7 +773,7 @@
   flex: none;
   width: 6px;
   height: 6px;
-  margin-inline-end: 6px;
+  margin-inline-end: calc(var(--bk-spacing) * 1.5);
   border-radius: 50%;
   background-color: var(--bk-color-destructive);
 }
@@ -775,25 +782,25 @@
 }
 .blockr-dock-toasts {
   position: fixed;
-  right: 0.5rem;
-  bottom: 0.5rem;
+  right: calc(var(--bk-spacing) * 2);
+  bottom: calc(var(--bk-spacing) * 2);
   z-index: 1090;
   box-sizing: border-box;
   display: grid;
-  gap: 0.5rem;
+  gap: calc(var(--bk-spacing) * 2);
   width: 21rem;
-  max-width: calc(100vw - 1rem);
-  max-height: calc(100dvh - 1rem);
+  max-width: calc(100vw - var(--bk-spacing) * 4);
+  max-height: calc(100dvh - var(--bk-spacing) * 4);
   margin: 0;
-  padding: 0.5rem;
+  padding: calc(var(--bk-spacing) * 2);
   overflow-y: auto;
   pointer-events: none;
 }
 .blockr-dock-toast {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
+  gap: calc(var(--bk-spacing) * 2);
+  padding: calc(var(--bk-spacing) * 2) calc(var(--bk-spacing) * 3);
   border: 1px solid var(--bk-color-border);
   border-radius: calc(var(--bk-radius) * 0.8);
   background-color: var(--bk-color-popover);
@@ -824,7 +831,7 @@
 .blockr-dock-toast-text {
   display: grid;
   flex: 1;
-  gap: 0.25rem;
+  gap: calc(var(--bk-spacing) * 1);
   min-width: 0;
 }
 .blockr-dock-toast-title,
@@ -863,8 +870,8 @@
 }
 .blockr-dock-toast-close {
   flex: none;
-  margin: -0.125rem -0.25rem 0 0;
-  padding: 0 0.375rem;
+  margin: calc(var(--bk-spacing) * -0.5) calc(var(--bk-spacing) * -1) 0 0;
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
@@ -891,9 +898,9 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 8px;
-  height: 48px;
-  padding: 0 12px;
+  gap: calc(var(--bk-spacing) * 2);
+  height: calc(var(--bk-spacing) * 12);
+  padding: 0 calc(var(--bk-spacing) * 3);
   border-bottom: 1px solid var(--bk-color-border);
   background: var(--bk-color-card);
   color: var(--bk-color-card-foreground);
@@ -924,9 +931,9 @@
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  height: 30px;
-  padding: 0 8px;
+  gap: calc(var(--bk-spacing) * 1);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 2);
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
@@ -957,7 +964,7 @@
 .blockr-dock-bar-steps {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: calc(var(--bk-spacing) * 1);
 }
 .blockr-dock-bar-button:focus-visible,
 .blockr-dock-bar-name:focus-visible {
@@ -965,15 +972,15 @@
   outline-offset: 1px;
 }
 .blockr-dock-bar[data-tabs] {
-  height: 87px;
-  padding-bottom: 39px;
+  height: calc(var(--bk-spacing) * 22);
+  padding-bottom: calc(var(--bk-spacing) * 10);
 }
 .blockr-dock-bar-name {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 8px;
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 2);
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
@@ -993,8 +1000,8 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   width: 16rem;
   max-width: 40vw;
-  height: 30px;
-  padding: 0 8px;
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 2);
   border: 1px solid var(--bk-color-ring);
   border-radius: calc(var(--bk-radius) * 0.8);
   background: transparent;
@@ -1010,7 +1017,7 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-bar-storage {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: calc(var(--bk-spacing) * 1);
 }
 .blockr-dock-bar-storage > * {
   flex: 0 1 auto;
@@ -1019,8 +1026,8 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-bar-status {
   display: inline-flex;
   align-items: center;
-  height: 30px;
-  padding: 0 4px;
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 1);
   color: var(--bk-color-muted-foreground);
   font-size: var(--bk-text-xs);
 }
@@ -1028,9 +1035,9 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
+  gap: calc(var(--bk-spacing) * 1.5);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 2.5);
   border: 1px solid var(--bk-color-border);
   border-radius: 999px;
   background: var(--bk-color-muted);
@@ -1051,16 +1058,16 @@ button.blockr-dock-bar-name:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: calc(var(--bk-spacing) * 7.5);
+  height: calc(var(--bk-spacing) * 7.5);
   color: var(--bk-color-warning-text);
 }
 .blockr-dock-logo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
-  padding: 0 5px;
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 1);
   color: var(--bk-color-primary);
 }
 .blockr-dock-logo-mark {
@@ -1117,8 +1124,8 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-bar-rule {
   flex: none;
   width: 1px;
-  height: 20px;
-  margin: 0 2px 0 12px;
+  height: calc(var(--bk-spacing) * 5);
+  margin: 0 calc(var(--bk-spacing) * 0.5) 0 calc(var(--bk-spacing) * 3);
   background: var(--bk-color-border);
 }
 .blockr-dock-bar-views[data-tabs] {
@@ -1127,31 +1134,31 @@ button.blockr-dock-bar-name:hover {
   bottom: 0;
   left: 0;
   box-sizing: border-box;
-  gap: 8px;
-  height: 39px;
-  padding: 0 12px;
+  gap: calc(var(--bk-spacing) * 2);
+  height: calc(var(--bk-spacing) * 10);
+  padding: 0 calc(var(--bk-spacing) * 3);
   border-top: 1px solid var(--bk-color-border);
 }
 .blockr-dock-tabs {
   display: flex;
   flex: 1 1 0;
   min-width: 0;
-  height: 38px;
-  margin-left: -4px;
+  height: 100%;
+  margin-left: calc(var(--bk-spacing) * -1);
   overflow-x: auto;
   scrollbar-width: none;
 }
 .blockr-dock-views-chevron {
   justify-content: center;
-  width: 30px;
+  width: calc(var(--bk-spacing) * 7.5);
   padding: 0;
 }
 .blockr-dock-tab {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 4px;
-  padding: 0 12px;
+  gap: calc(var(--bk-spacing) * 1);
+  padding: 0 calc(var(--bk-spacing) * 3);
   border: 0;
   background: transparent;
   color: var(--bk-color-muted-foreground);
@@ -1190,14 +1197,15 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-height: 34px;
-  padding: 0 4px 0 calc(4px + var(--depth, 0) * 16px);
+  gap: calc(var(--bk-spacing) * 1);
+  min-height: calc(var(--bk-spacing) * 8);
+  padding: 0 calc(var(--bk-spacing) * 1);
+  padding-left: calc(var(--bk-spacing) * 1 + var(--depth, 0) * var(--bk-spacing) * 4);
   border-radius: calc(var(--bk-radius) * 0.6);
 }
 .blockr-dock-views-slot {
   flex: none;
-  width: 22px;
+  width: calc(var(--bk-spacing) * 6);
 }
 .blockr-dock-views-grip {
   display: flex;
@@ -1205,7 +1213,7 @@ button.blockr-dock-bar-name:hover {
   align-items: center;
   justify-content: center;
   width: 14px;
-  height: 22px;
+  height: calc(var(--bk-spacing) * 6);
   color: var(--bk-color-muted-foreground);
   opacity: 0.5;
   cursor: grab;
@@ -1223,8 +1231,8 @@ button.blockr-dock-bar-name:hover {
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: calc(var(--bk-spacing) * 6);
+  height: calc(var(--bk-spacing) * 6);
   padding: 0;
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.6);
@@ -1248,9 +1256,11 @@ button.blockr-dock-bar-name:hover {
 }
 .blockr-dock-views-name {
   flex: 1 1 auto;
+  box-sizing: border-box;
   min-width: 0;
+  height: calc(var(--bk-spacing) * 6);
   overflow: hidden;
-  padding: 2px 7px;
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 1px solid transparent;
   border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
@@ -1270,8 +1280,8 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   width: 0;
   min-width: 0;
-  height: 26px;
-  padding: 0 7px;
+  height: calc(var(--bk-spacing) * 6);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 1px solid var(--bk-color-ring);
   border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
@@ -1289,8 +1299,8 @@ button.blockr-dock-bar-name:hover {
   outline-offset: 1px;
 }
 .blockr-dock-views-managed[data-confirming] {
-  gap: 8px;
-  padding-left: calc(10px + var(--depth, 0) * 16px);
+  gap: calc(var(--bk-spacing) * 2);
+  padding-left: calc(var(--bk-spacing) * 2.5 + var(--depth, 0) * var(--bk-spacing) * 4);
   background: color-mix(in oklab, var(--bk-color-destructive) 10%, transparent);
   color: var(--bk-color-destructive-text);
 }
@@ -1303,8 +1313,8 @@ button.blockr-dock-bar-name:hover {
 }
 .blockr-dock-views-confirm {
   flex: none;
-  height: 26px;
-  padding: 0 9px;
+  height: calc(var(--bk-spacing) * 6);
+  padding: 0 calc(var(--bk-spacing) * 2);
   border: 1px solid color-mix(in oklab, var(--bk-color-destructive) 35%, transparent);
   border-radius: calc(var(--bk-radius) * 0.6);
   background: var(--bk-color-popover);
@@ -1320,8 +1330,8 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-views-managed[data-drop=above]::before,
 .blockr-dock-views-managed[data-drop=below]::after {
   position: absolute;
-  right: 4px;
-  left: calc(22px + var(--drop-depth, 0) * 16px);
+  right: calc(var(--bk-spacing) * 1);
+  left: calc(14px + var(--bk-spacing) * 2 + var(--drop-depth, 0) * var(--bk-spacing) * 4);
   height: 2px;
   border-radius: 999px;
   background: var(--bk-color-primary);
@@ -1341,15 +1351,15 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-views-foot {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 4px 0 6px;
+  gap: calc(var(--bk-spacing) * 2);
+  padding: 0 calc(var(--bk-spacing) * 1) 0 calc(var(--bk-spacing) * 1.5);
 }
 .blockr-dock-views-add {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 30px;
-  padding: 0 4px;
+  gap: calc(var(--bk-spacing) * 1.5);
+  height: calc(var(--bk-spacing) * 7.5);
+  padding: 0 calc(var(--bk-spacing) * 1);
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
@@ -1363,9 +1373,9 @@ button.blockr-dock-bar-name:hover {
 }
 .blockr-dock-views-done {
   flex: none;
-  height: 26px;
+  height: calc(var(--bk-spacing) * 6);
   margin-left: auto;
-  padding: 0 10px;
+  padding: 0 calc(var(--bk-spacing) * 2.5);
   border: 1px solid color-mix(in oklab, var(--bk-color-primary) 35%, transparent);
   border-radius: calc(var(--bk-radius) * 0.6);
   background: color-mix(in oklab, var(--bk-color-primary) 7%, transparent);
@@ -1416,15 +1426,15 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 4px;
-  height: 48px;
-  padding: 0 14px 0 20px;
+  gap: calc(var(--bk-spacing) * 1);
+  height: calc(var(--bk-spacing) * 12);
+  padding: 0 calc(var(--bk-spacing) * 3) 0 calc(var(--bk-spacing) * 4);
   border-bottom: 1px solid var(--bk-color-border);
 }
 .blockr-dock-sidebar-title {
   flex: 1 1 auto;
   min-width: 0;
-  margin: 0 8px 0 0;
+  margin: 0 calc(var(--bk-spacing) * 2) 0 0;
   overflow: hidden;
   font-size: var(--bk-text-lg);
   font-weight: 600;
@@ -1438,8 +1448,8 @@ button.blockr-dock-bar-name:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: calc(var(--bk-spacing) * 6);
+  height: calc(var(--bk-spacing) * 6);
   padding: 0;
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.6);
@@ -1461,9 +1471,9 @@ button.blockr-dock-bar-name:hover {
 .blockr-dock-sidebar-expand {
   flex: none;
   box-sizing: border-box;
-  height: 26px;
-  margin-right: 4px;
-  padding: 0 8px;
+  height: calc(var(--bk-spacing) * 6);
+  margin-right: calc(var(--bk-spacing) * 1);
+  padding: 0 calc(var(--bk-spacing) * 2);
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
@@ -1497,12 +1507,12 @@ button.blockr-dock-bar-name:hover {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 0 20px;
+  padding: 0 calc(var(--bk-spacing) * 4);
 }
 .blockr-dock-sidebar-categories {
   display: grid;
-  gap: 12px;
-  margin: 16px 0;
+  gap: calc(var(--bk-spacing) * 3);
+  margin: calc(var(--bk-spacing) * 4) 0;
 }
 .blockr-dock-sidebar-category {
   border: 1px solid var(--bk-color-border);
@@ -1516,9 +1526,9 @@ button.blockr-dock-bar-name:hover {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 0 12px;
+  gap: calc(var(--bk-spacing) * 2);
+  min-height: calc(var(--bk-spacing) * 8);
+  padding: 0 calc(var(--bk-spacing) * 3);
   background: var(--bk-color-card);
   list-style: none;
   cursor: pointer;
@@ -1540,12 +1550,15 @@ button.blockr-dock-bar-name:hover {
 }
 .blockr-dock-sidebar-count {
   flex: none;
-  padding: 0 6px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  height: calc(var(--bk-spacing) * 5);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 1px solid var(--bk-color-border);
   border-radius: 999px;
   color: var(--bk-color-muted-foreground);
   font-size: var(--bk-text-xs);
-  line-height: 16px;
   font-variant-numeric: tabular-nums;
 }
 .blockr-dock-sidebar-summary .blockr-dock-chevron {
@@ -1590,23 +1603,23 @@ button.blockr-dock-bar-name:hover {
 }
 .blockr-dock-sidebar-option {
   position: relative;
-  padding: 12px;
+  padding: calc(var(--bk-spacing) * 3);
 }
 .blockr-dock-sidebar-option + .blockr-dock-sidebar-option {
   border-top: 1px solid var(--bk-color-border);
 }
 .blockr-dock-sidebar-reset {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  padding: 0 6px;
+  top: calc(var(--bk-spacing) * 3);
+  right: calc(var(--bk-spacing) * 3);
+  padding: 0 calc(var(--bk-spacing) * 1.5);
   border: 0;
   border-radius: calc(var(--bk-radius) * 0.6);
   background: transparent;
   color: var(--bk-color-muted-foreground);
   font: inherit;
   font-size: var(--bk-text-sm);
-  line-height: 20px;
+  line-height: calc(var(--bk-spacing) * 5);
   cursor: pointer;
 }
 .blockr-dock-sidebar-reset:hover {
@@ -1618,7 +1631,7 @@ button.blockr-dock-bar-name:hover {
   outline-offset: 1px;
 }
 .blockr-dock-sidebar-note {
-  margin: 16px 0;
+  margin: calc(var(--bk-spacing) * 4) 0;
   color: var(--bk-color-muted-foreground);
 }
 .blockr-dock-bar[data-pushed],
