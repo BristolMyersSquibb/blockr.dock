@@ -8,7 +8,7 @@ import type { DockState, FolderId, Grid, Panel, Rail, TabGroup, View } from "../
 import assistant from "./index.ts";
 
 const ASSISTANT = { plugin: "blockr.assistant-assistant_plugin" };
-const DAG = { plugin: "blockr.dag-dag_plugin" };
+const EDIT = { plugin: "blockr.core-edit_board_plugin" };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -28,8 +28,8 @@ function view(name: string, index: string, grid: Grid = EMPTY, folder: FolderId 
 
 // The board of the issue: Analysis, the active view, shows iris and head in
 // one tab group in its left half and plot in its right half.
-// The assistant sits on a rail at its left edge, and the DAG on a rail at its
-// right edge.
+// The assistant sits on a rail at its left edge, and core's Edit board plugin
+// on a rail at its right edge.
 // Overview, after it in the navigation, shows nothing.
 const BOARD: DockState = {
   ...defaultState,
@@ -39,7 +39,7 @@ const BOARD: DockState = {
       orientation: "horizontal",
       children: [group({ block: "iris" }, { block: "head" }), group({ block: "plot" })],
       sizes: [0.5, 0.5],
-      rails: { right: rail(DAG), left: rail(ASSISTANT) },
+      rails: { right: rail(EDIT), left: rail(ASSISTANT) },
     }),
   },
   active: "v1",
@@ -49,7 +49,7 @@ describe("describe()", () => {
   test("names the active view, then each view with the panels that its grid places", () => {
     expect(assistant.describe(DOCK, BOARD)).toEqual([
       "The active view is Analysis (id: v1).",
-      "- Analysis (id: v1): iris, head, plot, blockr.assistant-assistant_plugin, blockr.dag-dag_plugin",
+      "- Analysis (id: v1): iris, head, plot, blockr.assistant-assistant_plugin, blockr.core-edit_board_plugin",
       "- Overview (id: v2): empty",
     ]);
   });
@@ -74,7 +74,7 @@ describe("describe()", () => {
   });
 
   test("names no active view where `active` names none of the views", () => {
-    const lines = ["- Analysis (id: v1): iris, head, plot, blockr.assistant-assistant_plugin, blockr.dag-dag_plugin", "- Overview (id: v2): empty"];
+    const lines = ["- Analysis (id: v1): iris, head, plot, blockr.assistant-assistant_plugin, blockr.core-edit_board_plugin", "- Overview (id: v2): empty"];
     expect(assistant.describe(DOCK, { ...BOARD, active: null })).toEqual(lines);
     expect(assistant.describe(DOCK, { ...BOARD, active: "gone" })).toEqual(lines);
     expect(assistant.describe(DOCK, { ...BOARD, active: "constructor" })).toEqual(lines);
@@ -86,7 +86,7 @@ describe("describe()", () => {
   });
 
   test("gives no lines for another plugin class", () => {
-    expect(assistant.describe(DAG.plugin, BOARD)).toEqual([]);
+    expect(assistant.describe(EDIT.plugin, BOARD)).toEqual([]);
   });
 
   test("throws where the state does not have the shape of the dock's state", () => {
