@@ -567,12 +567,23 @@ test_that("the print marks the sections of each card that hides one", {
   expect_snapshot(print(new_dock_plugin(visible = list(a = "inputs"))))
 })
 
+# Whether the system collates text as the locale does, which
+# withr::local_collate() only warns of where it does not, as in the image that
+# blockr.ci runs the checks in
+# (https://github.com/BristolMyersSquibb/blockr.ci/issues/128).
+can_collate <- function(locale) {
+  old <- Sys.getlocale("LC_COLLATE")
+  on.exit(Sys.setlocale("LC_COLLATE", old))
+  nzchar(suppressWarnings(Sys.setlocale("LC_COLLATE", locale)))
+}
+
 test_that("the print orders the views by their keys in any collation", {
 
   # The collation of en_US.UTF-8 puts "aa", the key of the 37th view, before
   # "aA", the key of the 11th, while the client compares the keys by their
   # code units.
   skip_on_os("windows")
+  skip_if_not(can_collate("en_US.UTF-8"), "The locale en_US.UTF-8 is missing.")
   withr::local_collate("en_US.UTF-8")
 
   ids <- sprintf("v%02d", 1:37)

@@ -14,7 +14,7 @@ import { describe, expect, onTestFinished, test, vi } from "vitest";
 import { defaultState } from "../../state/index.ts";
 import type { DockState, Grid, Panel } from "../../state/index.ts";
 import * as dock from "./index.tsx";
-import { DOCK, click, drawn, hello, modules, pressFocused, startDock, typeSearch, waitFor } from "./testing.ts";
+import { DOCK, click, drawn, expectedErrors, hello, modules, pressFocused, startDock, typeSearch, waitFor } from "./testing.ts";
 import { FADES_FOR, SHOWN_FOR } from "./toasts.tsx";
 // The fixture of a board that R writes for a dock app script is a file of the
 // R package, which R's suite checks too.
@@ -118,6 +118,8 @@ describe("the dock's frontend", () => {
   });
 
   test("fails to draw, naming the value, where R holds a blockr option that the dock does not take", async () => {
+    // Core logs that the frontend failed.
+    const taken = expectedErrors(/failed in render\(\)/);
     const el = document.createElement("div");
     const { settled, stop } = await startDock(el, { narrow_breakpoint: "wide" });
     await settled();
@@ -125,6 +127,7 @@ describe("the dock's frontend", () => {
     expect(el.textContent).toContain('The blockr option narrow_breakpoint is "wide"');
     expect(el.querySelector(".blockr-dock")).toBeNull();
     stop();
+    expect(taken).toHaveLength(1);
   });
 
   test("shows no close button on a tab under the board lock", async () => {

@@ -9,4 +9,6 @@
 library(testthat)
 library(blockr.dock)
 
-test_check("blockr.dock")
+# A test that warns fails the check, so that its warning shows, rather than
+# passes as a count in the summary.
+test_check("blockr.dock", stop_on_warning = TRUE)

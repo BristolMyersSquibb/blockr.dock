@@ -22,7 +22,7 @@ import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
-import { click, drawn, pressFocused, typeInto, waitFor } from "./testing.ts";
+import { blockModules, click, drawn, expectedErrors, pressFocused, typeInto, waitFor } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
@@ -224,6 +224,7 @@ async function startSidebar(start: Start = {}) {
     compact: compactOption,
     view_tabs: viewTabsOption,
     sync_rails: syncRailsOption,
+    ...blockModules,
     [VIEWER]: { api: 1, default: viewer },
     zoom: { api: 1, default: zoom },
     grain: { api: 1, default: grain },
@@ -756,6 +757,9 @@ describe("the options sidebar", () => {
   });
 
   test("drops a category whose board options leave the board, though the user expanded it", async () => {
+    // The UI of grain asks for its default once grain leaves the board, and
+    // the default fails, which core logs, so that grain stays off the board.
+    const taken = expectedErrors(/The default of the board option "grain"/);
     const { el, core } = await startSidebar({ options: { grain: { value: 5, version: 1 } } });
     await open(el);
     await expand(el, "Extra options", "grain");
@@ -767,6 +771,7 @@ describe("the options sidebar", () => {
       expect(names(el)).not.toContain("Extra options");
     });
     expect(core.store.board().options.grain).toBeUndefined();
+    expect(taken).toHaveLength(1);
   });
 
   test("shows the board options on a locked board too, where a change goes onto the board", async () => {

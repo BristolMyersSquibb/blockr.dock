@@ -15,7 +15,7 @@ import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
-import { click, drawn, pressOn, typeInto } from "./testing.ts";
+import { blockModules, click, drawn, expectedErrors, pressOn, typeInto } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
@@ -70,6 +70,7 @@ async function startBar(options: BarOptions = {}) {
     compact: compactOption,
     view_tabs: viewTabsOption,
     sync_rails: syncRailsOption,
+    ...blockModules,
     ...(options.storageClass === undefined ? {} : { [STORAGE]: { api: 1, default: options.storageClass } }),
     ...options.modules,
   };
@@ -228,10 +229,13 @@ describe("the bar", () => {
   });
 
   test("fails to draw, naming the item, where R sends a navbar item that the dock cannot draw", async () => {
+    // Core logs that the frontend failed.
+    const taken = expectedErrors(/failed in render\(\)/);
     const { el } = await startBar({ navbar: [{ kind: "part", id: "clock" }] });
 
     expect(el.textContent).toContain('The dock has no part "clock" to draw on the navbar.');
     expect(el.querySelector(".blockr-dock")).toBeNull();
+    expect(taken).toHaveLength(1);
   });
 });
 
@@ -397,6 +401,8 @@ describe("the storage plugin's controls on the bar", () => {
   });
 
   test("log a run() that rejects, while the storage plugin tells the user why through a notification of its own", async () => {
+    // The dock logs the run() that rejects.
+    const taken = expectedErrors(/HTTP 503/);
     let core: CoreApi | undefined;
     const storageClass: Omit<PluginClass, "id"> = {
       storage: {
@@ -425,9 +431,12 @@ describe("the storage plugin's controls on the bar", () => {
     const toasts = [...document.querySelectorAll(".blockr-dock-toast")].map((t) => t.textContent);
     expect(toasts.filter((t) => t.includes("Connect is down."))).toHaveLength(1);
     expect(toasts.some((t) => t.includes("HTTP 503"))).toBe(false);
+    expect(taken).toHaveLength(1);
   });
 
   test("leave a warning in their place where controls() throws, which names the plugin's package", async () => {
+    // The dock logs the controls() that throws.
+    const taken = expectedErrors(/No token\./);
     const storageClass: Omit<PluginClass, "id"> = {
       storage: {
         controls: () => {
@@ -442,9 +451,12 @@ describe("the storage plugin's controls on the bar", () => {
     expect(warning?.title).toContain("No token.");
     expect(barItems(s.el)).toEqual(["logo", "name", "warning", "undo_redo", "spacer", "views", "options"]);
     expect(errors(s.logged, "blockr.dock").filter((m) => m.includes("No token."))).toHaveLength(1);
+    expect(taken).toHaveLength(1);
   });
 
   test("draw the first of two controls of one list that share an id, and log the second", async () => {
+    // The dock logs the second control.
+    const taken = expectedErrors(/share the ids "save"/);
     const run = () => Promise.resolve();
     const storageClass: Omit<PluginClass, "id"> = {
       storage: {
@@ -458,6 +470,7 @@ describe("the storage plugin's controls on the bar", () => {
 
     expect(s.el.querySelector(".blockr-dock-bar-storage")?.textContent).toBe("Save");
     expect(errors(s.logged, "blockr.dock").filter((m) => m.includes('"save"'))).toHaveLength(1);
+    expect(taken).toHaveLength(1);
   });
 
   test("give way first on a narrow bar, with a label cut short in full as the tooltip, where the control has none", async () => {
@@ -523,6 +536,8 @@ describe("a module on the bar", () => {
   });
 
   test("leaves a warning that names the module where it fails to load, declares another major or throws, and the rest of the bar works", async () => {
+    // The dock logs each module that cannot draw.
+    const taken = expectedErrors(/cannot draw/);
     const navbar: Json[] = [
       { kind: "part", id: "logo" },
       { kind: "module", id: "missing", module: "blockr.test-missing" },
@@ -556,6 +571,7 @@ describe("a module on the bar", () => {
     click(button(dockBar(s.el), "Options"));
     await drawn();
     expect(button(dockBar(s.el), "Options").getAttribute("aria-expanded")).toBe("true");
+    expect(taken).toHaveLength(3);
   });
 });
 
