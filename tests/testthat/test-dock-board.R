@@ -42,13 +42,13 @@ test_that("plg() names a plugin by its name in `plugins` or by its class", {
           v = dock_view(
             dock_grid(
               "a", "edit",
-              plg("edit"), plg("files"), plg("blockr.dag-dag_plugin")
+              plg("edit"), plg("blockr.core-file_storage_plugin")
             )
           )
         )
       ),
       edit = new_edit_board_plugin(),
-      files = new_file_storage_plugin()
+      new_file_storage_plugin()
     )
   )
 
@@ -58,8 +58,7 @@ test_that("plg() names a plugin by its name in `plugins` or by its class", {
       list(block = "a"),
       list(block = "edit"),
       list(plugin = "blockr.core-edit_board_plugin"),
-      list(plugin = "blockr.core-file_storage_plugin"),
-      list(plugin = "blockr.dag-dag_plugin")
+      list(plugin = "blockr.core-file_storage_plugin")
     )
   )
 
@@ -128,7 +127,7 @@ test_that("the dock refuses a plg() that names no plugin and no class", {
         new_dock_plugin(
           views = list(
             v = dock_view(dock_grid(plg("dga"), plg("edit"))),
-            w = dock_view(list(plg("x"), plg("blockr.dag-dag_plugin")))
+            w = dock_view(list(plg("x"), plg("blockr.core-edit_board_plugin")))
           )
         ),
         files = new_file_storage_plugin()
@@ -151,7 +150,7 @@ test_that("the dock refuses a plg() that names no plugin and no class", {
         views = list(
           v = dock_view(
             list(
-              plg("blockr.dag-dag_plugin"),
+              plg("blockr.core-file_storage_plugin"),
               plg("blockr.core-edit_board_plugin")
             )
           )
@@ -163,7 +162,7 @@ test_that("the dock refuses a plg() that names no plugin and no class", {
   expect_identical(
     grid_panels(dock_state_of(board)$views$v$grid),
     list(
-      list(plugin = "blockr.dag-dag_plugin"),
+      list(plugin = "blockr.core-file_storage_plugin"),
       list(plugin = "blockr.core-edit_board_plugin")
     )
   )

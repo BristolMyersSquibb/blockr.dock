@@ -264,12 +264,12 @@ describe("drawing a view", () => {
   });
 
   test("leaves out a panel that it cannot draw, and writes nothing back for it", async () => {
-    const dag = { plugin: "blockr.dag-dag_plugin" };
-    const grid: Grid = { ...main, rails: { left: rail(edit), right: rail(dag) } };
+    const gone = { plugin: "blockr.gone-gone_plugin" };
+    const grid: Grid = { ...main, rails: { left: rail(edit), right: rail(gone) } };
     const s = await start({ dockState: { ...state, views: { ...state.views, main: { name: "Main", folder: null, index: "a0", grid } } } });
 
     expect(s.shown()).toEqual(main);
-    expect(s.grid()?.rails?.right).toEqual(rail(dag));
+    expect(s.grid()?.rails?.right).toEqual(rail(gone));
   });
 });
 

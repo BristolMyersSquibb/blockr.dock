@@ -100,7 +100,7 @@ dock_grid(panels("a", "b", active = "b"), "c", sizes = c(0.3, 0.7))
 # The block a above a split of b and c
 dock_grid("a", group("b", "c"), orientation = "vertical")
 
-# The block a, with the DAG on a rail on the left edge
-dock_grid(blk("a"), rail(plg("blockr.dag-dag_plugin")))
+# The block a, with core's Edit board plugin on a rail on the left edge
+dock_grid(blk("a"), rail(plg("blockr.core-edit_board_plugin")))
 
 }

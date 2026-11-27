@@ -198,8 +198,9 @@ function boardWith(dockState: DockState): JsonBoard {
 }
 
 // The dock's state with two views: the first shows the blocks side by side,
-// with the DAG on a rail at its right edge, collapsed, and the second, which
-// is active, shows `b` alone, whose card shows its output alone.
+// with the panel of a plugin that the app does not run on a rail at its right
+// edge, collapsed, and the second, which is active, shows `b` alone, whose
+// card shows its output alone.
 const twoViews: DockState = {
   views: {
     main: {
@@ -220,8 +221,8 @@ const twoViews: DockState = {
         sizes: [1],
         rails: {
           right: {
-            panels: [{ plugin: "blockr.dag-dag_plugin" }],
-            active: { plugin: "blockr.dag-dag_plugin" },
+            panels: [{ plugin: "blockr.gone-gone_plugin" }],
+            active: { plugin: "blockr.gone-gone_plugin" },
             collapsed: true,
             size: 300,
           },

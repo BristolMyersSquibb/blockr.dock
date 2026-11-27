@@ -54,14 +54,14 @@ function storing(initial: Board) {
   };
 }
 
-// The id of the DAG's plugin class, whose panel the dock draws.
-const DAG_PLUGIN = "blockr.dag-dag_plugin";
-const drawn = new Map([[DAG_PLUGIN, "DAG"]]);
+// The id of the class of core's Edit board plugin, whose panel the dock draws.
+const EDIT_PLUGIN = "blockr.core-edit_board_plugin";
+const drawn = new Map([[EDIT_PLUGIN, "Edit board"]]);
 
-// The DAG's plugin, as the source of what it raises.
-const DAG: NotificationSource = {
+// Core's Edit board plugin, as the source of what it raises.
+const EDIT: NotificationSource = {
   kind: "module",
-  module: { object: { plugin: DAG_PLUGIN }, package: "blockr.dag" },
+  module: { object: { plugin: EDIT_PLUGIN }, package: "blockr.core" },
   code: "link_refused",
 };
 
@@ -92,13 +92,14 @@ function dockBoard(state: DockState): Board {
 // A board whose one view, main, shows a's panel alone.
 const plainBoard = boardWith({ main: groupGrid() }, "main");
 
-// A notification of the severity given, which the DAG's plugin raised unless
-// another source is given, about the board unless a board object is given.
+// A notification of the severity given, which the Edit board plugin raised
+// unless another source is given, about the board unless a board object is
+// given.
 function raised(
   id: string,
   severity: Notification["severity"],
   about?: BoardObject,
-  source: NotificationSource = DAG,
+  source: NotificationSource = EDIT,
 ): Notification {
   return { id, severity, message: `${severity} ${id}`, source, ...(about === undefined ? {} : { about }) };
 }
@@ -139,21 +140,21 @@ describe("the toasts", () => {
     };
     const given = holding([
       raised("board", "error"),
-      // R's condition, what the block's renderer raised and what the DAG's
+      // R's condition, what the block's renderer raised and what the Edit board
       // plugin raised about b show on b's card.
       raised("condition", "warning", { block: "b" }, evaluation),
       raised("renderer", "error", { block: "b" }, renderer),
       raised("plugin", "message", { block: "b" }),
       raised("stack", "warning", { stack: "s" }),
-      // The active view holds no panel of the DAG's plugin.
-      raised("dag", "error", { plugin: DAG_PLUGIN }),
+      // The active view holds no panel of the Edit board plugin.
+      raised("edit", "error", { plugin: EDIT_PLUGIN }),
     ]);
     const toasts = createTestToasts(given.notifications);
 
-    expect(ids(toasts)).toEqual(["board", "stack", "dag"]);
+    expect(ids(toasts)).toEqual(["board", "stack", "edit"]);
     const shown = toasts.list();
     given.set([...given.notifications.get(), raised("option", "message", { option: "n_rows" })]);
-    expect(ids(toasts)).toEqual(["board", "stack", "dag", "option"]);
+    expect(ids(toasts)).toEqual(["board", "stack", "edit", "option"]);
     expect(toasts.list()[0]).toBe(shown[0]);
   });
 
@@ -282,21 +283,21 @@ describe("the toasts", () => {
 });
 
 describe("the toast of a notification about a plugin whose panel the dock draws", () => {
-  const dag = { plugin: DAG_PLUGIN };
+  const edit = { plugin: EDIT_PLUGIN };
 
   test("shows while the active view holds no panel of the plugin, goes once it holds one, and comes back once it holds none again", () => {
-    const given = holding([raised("e", "error", dag), raised("m", "message", dag)]);
-    const board = storing(boardWith({ main: groupGrid(), side: groupGrid(dag) }, "main"));
+    const given = holding([raised("e", "error", edit), raised("m", "message", edit)]);
+    const board = storing(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "main"));
     const toasts = createTestToasts(given.notifications, board.store);
     expect(ids(toasts)).toEqual(["e", "m"]);
 
     vi.advanceTimersByTime(SHOWN_FOR - 1000);
-    board.set(boardWith({ main: groupGrid(), side: groupGrid(dag) }, "side"));
+    board.set(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "side"));
     expect(ids(toasts)).toEqual([]);
     expect(vi.getTimerCount()).toBe(0);
 
     // The message's toast counts its five seconds anew.
-    board.set(boardWith({ main: groupGrid(), side: groupGrid(dag) }, "main"));
+    board.set(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "main"));
     expect(ids(toasts)).toEqual(["e", "m"]);
     vi.advanceTimersByTime(SHOWN_FOR - 1);
     expect(ids(toasts)).toEqual(["e", "m"]);
@@ -305,25 +306,25 @@ describe("the toast of a notification about a plugin whose panel the dock draws"
   });
 
   test("goes as the active view comes to hold the panel, which a command adds", () => {
-    const given = holding([raised("e", "error", dag)]);
+    const given = holding([raised("e", "error", edit)]);
     const board = storing(boardWith({ main: groupGrid() }, "main"));
     const toasts = createTestToasts(given.notifications, board.store);
     expect(ids(toasts)).toEqual(["e"]);
 
-    board.set(boardWith({ main: groupGrid(dag) }, "main"));
+    board.set(boardWith({ main: groupGrid(edit) }, "main"));
     expect(ids(toasts)).toEqual([]);
   });
 
   test("does not come back once the user closed it or it faded, while its notification holds", () => {
-    const given = holding([raised("e", "error", dag), raised("m", "message", dag)]);
-    const board = storing(boardWith({ main: groupGrid(), side: groupGrid(dag) }, "main"));
+    const given = holding([raised("e", "error", edit), raised("m", "message", edit)]);
+    const board = storing(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "main"));
     const toasts = createTestToasts(given.notifications, board.store);
 
     toasts.close("e");
     vi.advanceTimersByTime(SHOWN_FOR + FADES_FOR);
     expect(ids(toasts)).toEqual([]);
-    board.set(boardWith({ main: groupGrid(), side: groupGrid(dag) }, "side"));
-    board.set(boardWith({ main: groupGrid(), side: groupGrid(dag) }, "main"));
+    board.set(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "side"));
+    board.set(boardWith({ main: groupGrid(), side: groupGrid(edit) }, "main"));
     expect(ids(toasts)).toEqual([]);
   });
 
@@ -337,8 +338,8 @@ describe("the toast of a notification about a plugin whose panel the dock draws"
 });
 
 describe("the link of a toast that shows a plugin's panel", () => {
-  const dag = { plugin: DAG_PLUGIN };
-  const show = { id: "blockr.dock-show_panel", args: { panel: dag } };
+  const edit = { plugin: EDIT_PLUGIN };
+  const show = { id: "blockr.dock-show_panel", args: { panel: edit } };
   const passes = { preflight: () => true };
   const fails = { preflight: () => false };
 
@@ -347,31 +348,31 @@ describe("the link of a toast that shows a plugin's panel", () => {
     // inner, then the view last, and both inner and last hold the panel.
     const board = dockBoard({
       views: {
-        last: { name: "Last", folder: null, index: "a2", grid: groupGrid(dag) },
-        inner: { name: "Inner", folder: "f", index: "a0", grid: groupGrid(dag) },
+        last: { name: "Last", folder: null, index: "a2", grid: groupGrid(edit) },
+        inner: { name: "Inner", folder: "f", index: "a0", grid: groupGrid(edit) },
         main: { name: "Main", folder: null, index: "a0", grid: groupGrid() },
       },
       folders: { f: { name: "F", folder: null, index: "a1" } },
       active: "main",
       visible: {},
     });
-    expect(panelShowing(board, DAG_PLUGIN, fails)).toEqual([{ id: "blockr.dock-activate_view", args: { view: "inner" } }, show]);
+    expect(panelShowing(board, EDIT_PLUGIN, fails)).toEqual([{ id: "blockr.dock-activate_view", args: { view: "inner" } }, show]);
   });
 
   test("only shows the panel where the active view is the first that holds it", () => {
-    const board = boardWith({ main: groupGrid(dag), side: groupGrid(dag) }, "main");
-    expect(panelShowing(board, DAG_PLUGIN, fails)).toEqual([show]);
+    const board = boardWith({ main: groupGrid(edit), side: groupGrid(edit) }, "main");
+    expect(panelShowing(board, EDIT_PLUGIN, fails)).toEqual([show]);
   });
 
   test("shows the panel in the active view where no view holds it, where blockr.dock-show_panel passes its preflight, and is none otherwise", () => {
     const board = boardWith({ main: groupGrid(), side: groupGrid() }, "side");
-    expect(panelShowing(board, DAG_PLUGIN, passes)).toEqual([show]);
+    expect(panelShowing(board, EDIT_PLUGIN, passes)).toEqual([show]);
     // As on a locked board, which adds no panel.
-    expect(panelShowing(board, DAG_PLUGIN, fails)).toBeUndefined();
+    expect(panelShowing(board, EDIT_PLUGIN, fails)).toBeUndefined();
   });
 
   test("is none on a board that holds no state of the dock's", () => {
-    expect(panelShowing({ ...plainBoard, plugins: {} }, DAG_PLUGIN, passes)).toBeUndefined();
+    expect(panelShowing({ ...plainBoard, plugins: {} }, EDIT_PLUGIN, passes)).toBeUndefined();
   });
 });
 
@@ -392,7 +393,7 @@ describe("what a toast names", () => {
     options: {
       registered: () => ({ n_rows: { label: "Rows shown" } }) as unknown as ReturnType<CoreApi["options"]["registered"]>,
     },
-    plugins: { appPlugins: () => ({ "blockr.dag-dag_plugin": { name: "DAG" } }) },
+    plugins: { appPlugins: () => ({ "blockr.core-edit_board_plugin": { name: "Edit board" } }) },
   };
 
   test("is the board object that the notification concerns, by the name the page shows for it, by its id where core no longer knows it, or the board", () => {
@@ -401,7 +402,7 @@ describe("what a toast names", () => {
         undefined,
         { option: "n_rows" },
         { option: "zoom" },
-        { plugin: "blockr.dag-dag_plugin" },
+        { plugin: "blockr.core-edit_board_plugin" },
         { plugin: "blockr.gone-gone_plugin" },
         { stack: "s" },
         { stack: "gone" },
@@ -414,7 +415,7 @@ describe("what a toast names", () => {
       "Board",
       'Board option "Rows shown"',
       'Board option "zoom"',
-      'Plugin "DAG"',
+      'Plugin "Edit board"',
       'Plugin "blockr.gone-gone_plugin"',
       'Stack "Inputs"',
       'Stack "gone"',
@@ -430,8 +431,8 @@ describe("what a toast names", () => {
       id: "failed",
       severity: "error",
       message: "No module.",
-      source: { kind: "core", code: "module_failed", module: { object: { plugin: "blockr.dag-dag_plugin" }, package: "blockr.dag" } },
-      about: { plugin: "blockr.dag-dag_plugin" },
+      source: { kind: "core", code: "module_failed", module: { object: { plugin: "blockr.core-edit_board_plugin" }, package: "blockr.core" } },
+      about: { plugin: "blockr.core-edit_board_plugin" },
     };
     const replied: Notification = {
       id: "replied",
@@ -441,9 +442,9 @@ describe("what a toast names", () => {
         kind: "r",
         class: ["simpleError", "error", "condition"],
         request: { type: "plugin", name: "layout" },
-        module: { object: { plugin: "blockr.dag-dag_plugin" }, package: "blockr.dag" },
+        module: { object: { plugin: "blockr.core-edit_board_plugin" }, package: "blockr.core" },
       },
-      about: { plugin: "blockr.dag-dag_plugin" },
+      about: { plugin: "blockr.core-edit_board_plugin" },
     };
     // What the store dropped as the board opened, which no module is behind.
     const dropped: Notification = {
@@ -454,9 +455,9 @@ describe("what a toast names", () => {
     };
 
     expect([raised("own", "error"), failed, replied, dropped].map(sourcePackage)).toEqual([
-      "blockr.dag",
-      "blockr.dag",
-      "blockr.dag",
+      "blockr.core",
+      "blockr.core",
+      "blockr.core",
       undefined,
     ]);
   });

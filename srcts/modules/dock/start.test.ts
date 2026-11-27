@@ -10,7 +10,6 @@ import { PAGE_ID, startingPatches, urlView } from "./start.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const EDIT = "blockr.core-edit_board_plugin";
-const DAG = "blockr.dag-dag_plugin";
 
 const head: Block = { registry_id: "blockr.core-head_block", state: {}, name: "Head", locked: null };
 
@@ -45,7 +44,7 @@ const empty: DockState = { views: {}, folders: {}, active: null, visible: {} };
 
 const twoViews: DockState = {
   views: {
-    main: view({ orientation: "horizontal", children: [group({ block: "a" }, { plugin: DAG })], sizes: [1] }, "a0"),
+    main: view({ orientation: "horizontal", children: [group({ block: "a" }, { plugin: EDIT })], sizes: [1] }, "a0"),
     side: view({ orientation: "horizontal", children: [group({ block: "b" })], sizes: [1] }, "a1"),
   },
   folders: {},
@@ -91,21 +90,21 @@ describe("startingPatches()", () => {
 
   test("removes from every view the panels of plugins that the dock cannot draw", () => {
     const board = boardWith(twoViews);
-    expect(after(board, startingPatches(board, [EDIT], undefined))).toEqual({
+    expect(after(board, startingPatches(board, [], undefined))).toEqual({
       ...twoViews,
       views: { ...twoViews.views, main: view({ orientation: "horizontal", children: [group({ block: "a" })], sizes: [1] }, "a0") },
     });
-    expect(startingPatches(board, [DAG], undefined)).toEqual([]);
+    expect(startingPatches(board, [EDIT], undefined)).toEqual([]);
   });
 
   test("makes active the view that the URL names", () => {
     const board = boardWith(twoViews);
-    expect(after(board, startingPatches(board, [DAG], "side"))).toMatchObject({ active: "side" });
-    expect(startingPatches(board, [DAG], "main")).toEqual([]);
+    expect(after(board, startingPatches(board, [EDIT], "side"))).toMatchObject({ active: "side" });
+    expect(startingPatches(board, [EDIT], "main")).toEqual([]);
   });
 
   test("changes nothing for a URL that names no view", () => {
-    expect(startingPatches(boardWith(twoViews), [DAG], "gone")).toEqual([]);
+    expect(startingPatches(boardWith(twoViews), [EDIT], "gone")).toEqual([]);
   });
 
   test("makes the view Page active for a URL that names it", () => {
@@ -129,11 +128,11 @@ describe("urlView()", () => {
 });
 
 describe("onScreen()", () => {
-  const drawn = new Map([[DAG, "DAG"]]);
+  const drawn = new Map([[EDIT, "Edit board"]]);
   const rail = { ...group({ block: "c" }, { block: "d" }), collapsed: false, size: 260 };
   const main: Grid = {
     orientation: "horizontal",
-    children: [{ panels: [{ block: "a" }, { block: "b" }], active: { block: "b" } }, group({ plugin: DAG })],
+    children: [{ panels: [{ block: "a" }, { block: "b" }], active: { block: "b" } }, group({ plugin: EDIT })],
     sizes: [0.5, 0.5],
     rails: { left: rail },
   };
@@ -141,13 +140,13 @@ describe("onScreen()", () => {
   const blocks = ["a", "b", "c", "d"];
 
   test("gives the blocks and the plugins whose panels the tab groups and the open rails of the active view show", () => {
-    expect(onScreen(boardWith(state, blocks), drawn, false)).toEqual({ blocks: ["b", "c"], plugins: [DAG] });
+    expect(onScreen(boardWith(state, blocks), drawn, false)).toEqual({ blocks: ["b", "c"], plugins: [EDIT] });
   });
 
   test("leaves out the panel that a collapsed rail shows, but in the narrow column", () => {
     const collapsed = { ...state, views: { ...state.views, main: view({ ...main, rails: { left: { ...rail, collapsed: true } } }) } };
-    expect(onScreen(boardWith(collapsed, blocks), drawn, false)).toEqual({ blocks: ["b"], plugins: [DAG] });
-    expect(onScreen(boardWith(collapsed, blocks), drawn, true)).toEqual({ blocks: ["b", "c"], plugins: [DAG] });
+    expect(onScreen(boardWith(collapsed, blocks), drawn, false)).toEqual({ blocks: ["b"], plugins: [EDIT] });
+    expect(onScreen(boardWith(collapsed, blocks), drawn, true)).toEqual({ blocks: ["b", "c"], plugins: [EDIT] });
   });
 
   test("gives the blocks and the plugins of the active view alone", () => {

@@ -5,7 +5,7 @@
 #' The function `blk()` names the panel of a block, by the block's id.
 #' The function `plg()` names the panel of a plugin, by the name that the app
 #' script gives the plugin in the `plugins` of [blockr.core::new_board()], or
-#' else by the id of the plugin's class, as `"blockr.dag-dag_plugin"`.
+#' else by the id of the plugin's class, as `"blockr.core-edit_board_plugin"`.
 #' A bare id names a panel too, that of the block of that id.
 #'
 #' The dock refuses no id of a plugin class, since such an id may name the
@@ -25,10 +25,10 @@
 #'
 #' @examples
 #' blk("a")
-#' plg("dag")
-#' plg("blockr.dag-dag_plugin")
+#' plg("edit")
+#' plg("blockr.core-edit_board_plugin")
 #'
-#' dock_grid(blk("a"), "b", rail(plg("dag")))
+#' dock_grid(blk("a"), "b", rail(plg("edit")))
 #'
 #' @rdname panel-ref
 #' @export

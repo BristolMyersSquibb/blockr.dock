@@ -25,7 +25,7 @@ describe("readNavbar()", () => {
           { kind: "menu", id: "more", label: "More", items: [] },
         ],
       },
-      { kind: "module", id: "deck", module: "blockr.topline-deck_button" },
+      { kind: "module", id: "deck", module: "blockr.test-deck_button" },
     ];
     expect(readNavbar({ navbar })).toEqual(navbar);
   });

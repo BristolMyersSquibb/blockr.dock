@@ -9,7 +9,7 @@ import type { Reading } from "./index.ts";
 const a = { block: "a" };
 const b = { block: "b" };
 const c = { block: "c" };
-const dag = { plugin: "blockr.dag-dag_plugin" };
+const edit = { plugin: "blockr.core-edit_board_plugin" };
 
 function group(...panels: Panel[]): TabGroup {
   const [first] = panels;
@@ -25,7 +25,7 @@ const stored: Grid = {
   orientation: "horizontal",
   children: [group(a, b), group(c)],
   sizes: [0.3, 0.7],
-  rails: { left: rail(dag) },
+  rails: { left: rail(edit) },
 };
 
 // A gesture that was no drag, as a click on a tab, and a drag of a sash.
@@ -43,15 +43,15 @@ describe("gestureRuns()", () => {
   });
 
   test("runs blockr.dock-collapse_rail where only whether a rail is collapsed changed", () => {
-    const read: Grid = { ...stored, rails: { left: { ...rail(dag), collapsed: true } } };
+    const read: Grid = { ...stored, rails: { left: { ...rail(edit), collapsed: true } } };
     expect(gestureRuns("v", stored, read, stored, click)).toEqual([
       { id: "blockr.dock-collapse_rail", args: { view: "v", edge: "left", collapsed: true } },
     ]);
   });
 
   test("runs both where a click on a collapsed rail's other tab shows it and opens the rail", () => {
-    const shown: Grid = { ...stored, rails: { left: { ...rail(dag, c), collapsed: true } } };
-    const read: Grid = { ...stored, rails: { left: { ...rail(dag, c), active: c } } };
+    const shown: Grid = { ...stored, rails: { left: { ...rail(edit, c), collapsed: true } } };
+    const read: Grid = { ...stored, rails: { left: { ...rail(edit, c), active: c } } };
     expect(gestureRuns("v", shown, read, shown, click)).toEqual([
       { id: "blockr.dock-activate_panel", args: { view: "v", panel: c } },
       { id: "blockr.dock-collapse_rail", args: { view: "v", edge: "left", collapsed: false } },
@@ -92,24 +92,24 @@ describe("gestureRuns()", () => {
   });
 
   test("runs blockr.dock-set_grid where a drag of the rail's sash widened the rail", () => {
-    const read: Grid = { ...stored, rails: { left: { ...rail(dag), size: 400 } } };
+    const read: Grid = { ...stored, rails: { left: { ...rail(edit), size: 400 } } };
     expect(gestureRuns("v", stored, read, stored, drag)).toEqual([{ id: "blockr.dock-set_grid", args: { view: "v", grid: read } }]);
   });
 
   test("keeps a rail's stored width where the dock's own width changed, as dockview narrows a rail that it cannot hold", () => {
-    const read: Grid = { ...stored, rails: { left: { ...rail(dag), size: 120 } } };
+    const read: Grid = { ...stored, rails: { left: { ...rail(edit), size: 120 } } };
     expect(gestureRuns("v", read, read, stored, { ...drag, widths: false })).toEqual([]);
     const moved: Grid = { ...read, children: [group(a), group(b, c)] };
     expect(gestureRuns("v", read, moved, stored, click)).toEqual([
-      { id: "blockr.dock-set_grid", args: { view: "v", grid: { ...moved, rails: { left: rail(dag) } } } },
+      { id: "blockr.dock-set_grid", args: { view: "v", grid: { ...moved, rails: { left: rail(edit) } } } },
     ]);
   });
 
   test("keeps the stored width of a rail that dockview narrowed before, through a drag of another sash", () => {
-    const shown: Grid = { ...stored, rails: { left: { ...rail(dag), size: 120 } } };
+    const shown: Grid = { ...stored, rails: { left: { ...rail(edit), size: 120 } } };
     const read: Grid = { ...shown, sizes: [0.4, 0.6] };
     expect(gestureRuns("v", shown, read, stored, drag)).toEqual([
-      { id: "blockr.dock-set_grid", args: { view: "v", grid: { ...read, rails: { left: rail(dag) } } } },
+      { id: "blockr.dock-set_grid", args: { view: "v", grid: { ...read, rails: { left: rail(edit) } } } },
     ]);
   });
 
@@ -120,19 +120,19 @@ describe("gestureRuns()", () => {
 });
 
 describe("columnRuns()", () => {
-  const column: Grid = { orientation: "vertical", children: [group(a, b), group(c), group(dag)], sizes: [0.4, 0.4, 0.2] };
+  const column: Grid = { orientation: "vertical", children: [group(a, b), group(c), group(edit)], sizes: [0.4, 0.4, 0.2] };
 
   test("runs nothing where nothing changed", () => {
     expect(columnRuns("v", column, column)).toEqual([]);
   });
 
   test("runs blockr.dock-activate_panel for a panel that a row shows now", () => {
-    const read: Grid = { ...column, children: [{ ...group(a, b), active: b }, group(c), group(dag)] };
+    const read: Grid = { ...column, children: [{ ...group(a, b), active: b }, group(c), group(edit)] };
     expect(columnRuns("v", column, read)).toEqual([{ id: "blockr.dock-activate_panel", args: { view: "v", panel: b } }]);
   });
 
   test("runs blockr.dock-remove_panel for a panel that a row lost, then shows the one that its row shows now", () => {
-    const read: Grid = { ...column, children: [{ ...group(b), active: b }, group(c), group(dag)] };
+    const read: Grid = { ...column, children: [{ ...group(b), active: b }, group(c), group(edit)] };
     expect(columnRuns("v", column, read)).toEqual([
       { id: "blockr.dock-remove_panel", args: { view: "v", panel: a } },
       { id: "blockr.dock-activate_panel", args: { view: "v", panel: b } },

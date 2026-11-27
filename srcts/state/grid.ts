@@ -33,7 +33,7 @@ export type Side = (typeof SIDES)[number];
 // Today's rail() has 260, which leaves a plugin's UI about 200 pixels once the
 // rail's tabs and scrollbar take theirs.
 // A rail of 500 fits a row of core's Edit board plugin on one line, and gives
-// a plugin such as the DAG or the assistant room to work.
+// a plugin's UI room to work.
 export const RAIL_SIZE = 500;
 
 // How far from 1 the shares of a split may sum, to allow for rounding, as
@@ -224,7 +224,8 @@ export function panelName(panel: Panel): string {
 // group in reading order that holds no plugin's panel.
 // Where every tab group holds a plugin's panel, the panel gets a tab group of
 // its own, as appendTabGroup() adds one.
-// So a block's panel never covers the DAG that it was added from.
+// So a block's panel never covers the panel of the plugin that it was added
+// from, such as core's Edit board plugin.
 // A grid that places the panel already stays as it is.
 export function placePanel(grid: Grid, panel: Panel): Grid {
   if (places(grid, panel)) return grid;

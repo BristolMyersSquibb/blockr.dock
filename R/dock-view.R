@@ -51,7 +51,9 @@
 #' view_name(dock_view("a", name = "Overview"))
 #'
 #' view_blocks(
-#'   dock_view(dock_grid(panels("a", "b"), rail(plg("blockr.dag-dag_plugin"))))
+#'   dock_view(
+#'     dock_grid(panels("a", "b"), rail(plg("blockr.core-edit_board_plugin")))
+#'   )
 #' )
 #'
 #' @rdname view

@@ -4,11 +4,11 @@
 #' the dock's state among the board's `plugins`, as the dock plugin that
 #' [new_dock_plugin()] makes.
 #' The script may name the board's other plugins there, as
-#' `plugins = list(new_dock_plugin(...), dag = new_dag_plugin())`, and a grid
-#' then names a plugin's panel by that name, as `plg("dag")`.
+#' `plugins = list(new_dock_plugin(...), edit = new_edit_board_plugin())`,
+#' and a grid then names a plugin's panel by that name, as `plg("edit")`.
 #' A grid may also name a plugin by the id of its class, as
-#' `plg("blockr.dag-dag_plugin")`, and so name a plugin that the board does
-#' not hold, such as one that keeps no state.
+#' `plg("blockr.core-edit_board_plugin")`, and so name a plugin that the board
+#' does not hold, such as one that keeps no state.
 #'
 #' As `new_board()` builds the board, the dock completes its state on it,
 #' through its method of [blockr.core::complete_plugin()].

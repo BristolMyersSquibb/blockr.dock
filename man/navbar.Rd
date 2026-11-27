@@ -43,8 +43,8 @@ For \code{navbar_storage()}, the id of the storage plugin's control.}
 For \code{frontend_args()}, the other arguments of \code{\link[blockr.core:serve]{blockr.core::serve()}}.
 The dock refuses them.}
 
-\item{module}{The id of a module that a package offers, as
-\code{"blockr.topline-deck_button"}}
+\item{module}{The id of a module that a package offers, which has the form
+\code{{package}-{name}}}
 
 \item{x}{An object.
 For \code{frontend_args()}, the dock plugin, from \code{\link[=new_dock_plugin]{new_dock_plugin()}}.}

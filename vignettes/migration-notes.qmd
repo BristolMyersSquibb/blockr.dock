@@ -33,7 +33,8 @@ They are written so that an AI can apply them to a script.
 Each section names what a script calls in version 0.2.0, says what takes its place, and shows the code of both versions.
 A function of version 0.2.0 that is gone has no alias, so a script that still calls it stops with R's error that the function cannot be found.
 An argument that is gone stops the call as an unused argument.
-A script follows the migration notes of blockr.core too, and those of each other blockr package that it calls, such as blockr.dag for the DAG.
+A script follows the migration notes of blockr.core too, and those of each other blockr package that it calls.
+A script that draws the DAG with blockr.dag follows the notes of blockr.graph, whose plugin takes the place of the DAG's extension.
 
 ## Boards that version 0.2.0 saved
 
@@ -57,7 +58,7 @@ Version 0.2.0 does not open such a file, and the conversion does not read it eit
 The JSON board opens with the views of the file, in their order, with their names and grids, and on the same active view.
 Each card shows the sections that it showed, each stack keeps its colour, and each of the dock's board options keeps its value.
 Each extension of the file becomes the plugin that takes its place, with the extension's state.
-So the panel of the DAG's extension becomes the panel of blockr.dag's plugin.
+So the panel of the DAG's extension becomes the panel of blockr.graph's plugin.
 The panels of the Edit board extension become those of core's Edit board plugin.
 
 Some of what a file holds does not cross:
@@ -249,18 +250,18 @@ board <- new_board(
         main = dock_view(dock_grid(plg("analysis"), panels("a", "b")))
       )
     ),
-    analysis = blockr.dag::new_dag_plugin()
+    analysis = blockr.graph::new_graph_plugin()
   )
 )
 ```
 
 The migration notes of each package that gave an extension name the plugin that takes its place.
-For the DAG, blockr.dag gives `new_dag_plugin()` in place of `new_dag_extension()`.
+For the DAG of blockr.dag, the notes of blockr.graph give `new_graph_plugin()` in place of `new_dag_extension()`.
 
 In version 0.2.0, an extension without a name in `extensions` has the name of its class, without `_extension`, as `dag` for `new_dag_extension()`.
 In version 0.2.1, a plugin without a name has none.
-So a script that places the panel of such an extension, as `ext("dag")` does, gives its plugin that name, as `dag = blockr.dag::new_dag_plugin()`.
-A grid may also name a plugin by the id of its class, as `plg("blockr.dag-dag_plugin")`, which needs no name.
+So a script that places the panel of such an extension, as `ext("dag")` does, gives its plugin that name, as `dag = blockr.graph::new_graph_plugin()`.
+A grid may also name a plugin by the id of its class, as `plg("blockr.graph-graph_plugin")`, which needs no name.
 Core's `new_board()` refuses a `plg()` whose id is neither a name in `plugins` nor the id of a plugin class.
 
 The Edit board extension goes, since core's Edit board plugin makes the same edits.
@@ -416,7 +417,7 @@ Nothing draws UI in R in version 0.2.1, so a script gives one of these items in 
 
 - A link, `navbar_link(id, label, href)`, which opens in a new tab.
 - A menu of links and further menus, `navbar_menu(id, label, ...)`.
-- A module that a package offers, `navbar_item(id, module)`, by the module's id, as `"blockr.topline-deck_button"`.
+- A module that a package offers, `navbar_item(id, module)`, by the module's id, which has the form `{package}-{name}`.
   Where the item needs R, that package gives a plugin class, whose requests the module calls.
 
 ```{r, eval = FALSE}
@@ -502,7 +503,7 @@ The notes of blockr.core describe this for core's parts, and the readers of the 
 - Core's `board_plugins()` reads the plugins of a board, the dock plugin among them, in place of `dock_extensions()`.
 
 The function `board_grids()` goes, since each view that `board_views()` reads holds its grid.
-Such a grid names the panel of each plugin by the id of the plugin's class, as `plg("blockr.dag-dag_plugin")`.
+Such a grid names the panel of each plugin by the id of the plugin's class, as `plg("blockr.core-edit_board_plugin")`.
 The board keeps no name that a script gives a plugin.
 
 Take a board with two views, `main` and `side`, as version 0.2.1 builds it:
