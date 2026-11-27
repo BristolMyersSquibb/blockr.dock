@@ -350,10 +350,10 @@ test_that("serve() hands navbar to the dock's frontend_args()", {
 
   # It refuses every other argument, without evaluating it
   expect_error(
-    serve(board, title = "Trials", theme = no_such_function()),
+    serve(board, title = "Trials", height = no_such_function()),
     paste0(
       "The app's frontend, blockr.dock-dock_plugin, takes no argument of ",
-      "`serve()` but `navbar`, and was given `title` and `theme`."
+      "`serve()` but `navbar`, and was given `title` and `height`."
     ),
     fixed = TRUE,
     class = "frontend_args_invalid"
