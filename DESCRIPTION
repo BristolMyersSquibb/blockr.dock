@@ -35,7 +35,7 @@ Suggests:
     chromote,
     yyjsonr
 Remotes:
-    BristolMyersSquibb/blockr.core@866-blockr-ui,
+    BristolMyersSquibb/blockr.core@js-state,
     BristolMyersSquibb/blockr.ui@js-state
 Config/testthat/edition: 3
 VignetteBuilder: quarto
