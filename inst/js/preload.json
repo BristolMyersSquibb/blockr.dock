@@ -1,6 +1,10 @@
 {
+  "assistant.js": [
+    "./vendor-a3ad4872.js"
+  ],
   "compact-option.js": [
     "@blockr/core/react",
+    "@blockr/ui",
     "react/jsx-runtime"
   ],
   "dock.css": [
@@ -11,11 +15,13 @@
     "react-dom/client",
     "./vendor-a3ad4872.js",
     "@blockr/core/react",
+    "@blockr/ui",
     "react/jsx-runtime",
     "react"
   ],
   "sync-rails-option.js": [
     "@blockr/core/react",
+    "@blockr/ui",
     "react/jsx-runtime"
   ],
   "vendor-a3ad4872.js": [
@@ -24,6 +30,7 @@
   ],
   "view-tabs-option.js": [
     "@blockr/core/react",
+    "@blockr/ui",
     "react/jsx-runtime"
   ]
 }

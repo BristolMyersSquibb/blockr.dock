@@ -7,12 +7,14 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { CoreApi, JsonBoard, PluginModule } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
-import { flushSync } from "react-dom";
+import { themeVariables } from "@blockr/ui/build";
+import { themeLightSpaced } from "dockview-react";
+import { act } from "react";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import { defaultState } from "../../state/index.ts";
 import type { DockState, Grid, Panel } from "../../state/index.ts";
 import * as dock from "./index.tsx";
-import { DOCK, hello, modules, startDock } from "./testing.ts";
+import { DOCK, click, drawn, expectedErrors, hello, modules, pressFocused, startDock, typeSearch, waitFor } from "./testing.ts";
 import { FADES_FOR, SHOWN_FOR } from "./toasts.tsx";
 // The fixture of a board that R writes for a dock app script is a file of the
 // R package, which R's suite checks too.
@@ -51,8 +53,8 @@ describe("the dock's frontend", () => {
     const { core, settled, stop } = await startDock(el);
     await settled();
 
-    await core.commands.run("blockr.core-set_option", { id: "sync_rails", value: false });
-    await core.commands.run("blockr.core-set_option", { id: "compact", value: true });
+    await act(() => core.commands.run("blockr.core-set_option", { id: "sync_rails", value: false }));
+    await act(() => core.commands.run("blockr.core-set_option", { id: "compact", value: true }));
     await settled();
 
     expect(core.store.board().options).toMatchObject({ compact: true, view_tabs: false, sync_rails: false });
@@ -72,31 +74,33 @@ describe("the dock's frontend", () => {
     stop();
   });
 
-  test("keeps dockview's light-spaced theme while dark_mode is dark, as the stylesheet's bridge follows dark_mode", async () => {
+  test("keeps dockview's light-spaced theme while dark_mode is dark, as the stylesheet's bridge follows the mode", async () => {
     const el = document.createElement("div");
     const { core, settled, stop } = await startDock(el);
     await settled();
 
-    await core.commands.run("blockr.core-set_option", { id: "dark_mode", value: "dark" });
+    await act(() => core.commands.run("blockr.core-set_option", { id: "dark_mode", value: "dark" }));
     await settled();
     expect(el.querySelector(".blockr-dock .dv-shell")?.classList).toContain("dockview-theme-light-spaced");
-    expect(document.documentElement.getAttribute("data-bc-theme")).toBe("dark");
+    expect(document.documentElement.getAttribute("data-bk-mode")).toBe("dark");
     stop();
   });
 
   test("removes what it drew in its cleanup", async () => {
     const s = await startDock();
     const el = document.createElement("div");
-    const cleanup = await dock.default.frontend.render({
+    const cleanup = await act(() => dock.default.frontend.render({
       el,
       core: s.core,
       plugin: DOCK,
       signal: new AbortController().signal,
       args: {},
-    });
+    }));
     expect(el.querySelector(".blockr-dock")).not.toBeNull();
 
-    cleanup?.();
+    act(() => {
+      cleanup?.();
+    });
     expect(el.childElementCount).toBe(0);
     s.stop();
   });
@@ -114,6 +118,8 @@ describe("the dock's frontend", () => {
   });
 
   test("fails to draw, naming the value, where R holds a blockr option that the dock does not take", async () => {
+    // Core logs that the frontend failed.
+    const taken = expectedErrors(/failed in render\(\)/);
     const el = document.createElement("div");
     const { settled, stop } = await startDock(el, { narrow_breakpoint: "wide" });
     await settled();
@@ -121,6 +127,7 @@ describe("the dock's frontend", () => {
     expect(el.textContent).toContain('The blockr option narrow_breakpoint is "wide"');
     expect(el.querySelector(".blockr-dock")).toBeNull();
     stop();
+    expect(taken).toHaveLength(1);
   });
 
   test("shows no close button on a tab under the board lock", async () => {
@@ -148,7 +155,7 @@ describe("the dock's frontend", () => {
     await s.settled();
     const before = el.querySelector(".blockr-dock");
 
-    await s.core.store.open(JSON.stringify(HELLO.board));
+    await act(() => s.core.store.open(JSON.stringify(HELLO.board)));
     await s.settled();
 
     const after = el.querySelector(".blockr-dock");
@@ -180,10 +187,10 @@ function boardWith(dockState: DockState): JsonBoard {
       links: { ab: { from: "a", to: "b", input: "data" } },
       stacks: { s1: { name: "Input", blocks: ["a", "b"], color: "#ffcc88" } },
       options: {
-        dark_mode: { value: "light", version: 1 },
-        compact: { value: false, version: 1 },
-        view_tabs: { value: false, version: 1 },
-        sync_rails: { value: true, version: 1 },
+        dark_mode: { value: "light", version: 1, package: "blockr.core" },
+        compact: { value: false, version: 1, package: "blockr.dock" },
+        view_tabs: { value: false, version: 1, package: "blockr.dock" },
+        sync_rails: { value: true, version: 1, package: "blockr.dock" },
       },
       plugins: { [DOCK]: { state: dockState, version: 1 } },
     },
@@ -277,7 +284,7 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    await core.commands.run("blockr.core-remove_block", { id: "b" });
+    await act(() => core.commands.run("blockr.core-remove_block", { id: "b" }));
     expect(core.store.board().plugins[DOCK]).toMatchObject({
       views: {
         main: { grid: { children: [{ children: [{ panels: [{ block: "a" }] }], sizes: [1] }] } },
@@ -286,7 +293,9 @@ describe("the dock plugin's state", () => {
       visible: {},
     });
 
-    core.store.undo();
+    act(() => {
+      core.store.undo();
+    });
     expect(core.store.board().plugins[DOCK]).toEqual(twoViews);
     stop();
   });
@@ -295,7 +304,7 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    await core.commands.run("blockr.core-add_block", { registry_id: "blockr.core-head_block", id: "c" });
+    await act(() => core.commands.run("blockr.core-add_block", { registry_id: "blockr.core-head_block", id: "c" }));
     expect(core.store.board().plugins[DOCK]).toMatchObject({
       views: { side: { grid: { children: [{ panels: [{ block: "b" }, { block: "c" }], active: { block: "c" } }] } } },
     });
@@ -306,7 +315,7 @@ describe("the dock plugin's state", () => {
     const { core, settled, stop } = await startDock(undefined, {}, boardWith(twoViews));
     await settled();
 
-    await core.commands.run("blockr.core-set_plugin_state", { plugin: DOCK, patches: [{ op: "remove", path: "/views/side" }] });
+    await act(() => core.commands.run("blockr.core-set_plugin_state", { plugin: DOCK, patches: [{ op: "remove", path: "/views/side" }] }));
     expect(core.store.board().plugins[DOCK]).toMatchObject({ active: "main" });
     stop();
   });
@@ -443,7 +452,7 @@ describe("the demand", () => {
     const { core, sent, settled, stop } = await startDock(document.createElement("div"), {}, withC);
     await settled();
 
-    await core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "c" } });
+    await act(() => core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "c" } }));
     await settled();
 
     expect(evaluated(sent).sort()).toEqual(["a", "b", "c"]);
@@ -556,7 +565,7 @@ describe("a plugin's panel", () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: EDIT }, { plugin: NOTES }]))));
 
-    await s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { plugin: EDIT } });
+    await act(() => s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { plugin: EDIT } }));
     await s.settled();
 
     const frame = panelFrame(el, NOTES);
@@ -576,7 +585,7 @@ describe("a plugin's panel", () => {
     expect(frame?.textContent).toBe("Notes");
     expect(frame?.closest<HTMLElement>(".dv-render-overlay")?.style.visibility).toBe("hidden");
 
-    await s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: false });
+    await act(() => s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: false }));
     await s.settled();
     expect(s.notes.renders).toHaveLength(1);
     expect(s.notes.cleanups()).toBe(0);
@@ -587,26 +596,26 @@ describe("a plugin's panel", () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: EDIT }, { plugin: NOTES }]), gridWith([{ block: "b" }]))));
 
-    await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: NOTES } });
+    await act(() => s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: NOTES } }));
     await s.settled();
     expect(s.notes.cleanups()).toBe(1);
     expect(s.notes.renders[0]?.signal.aborted).toBe(true);
     expect(panelFrame(el, NOTES)).toBeNull();
 
-    await s.core.commands.run("blockr.dock-add_panel", { view: "main", panel: { plugin: NOTES } });
+    await act(() => s.core.commands.run("blockr.dock-add_panel", { view: "main", panel: { plugin: NOTES } }));
     await s.settled();
     expect(s.notes.renders).toHaveLength(2);
 
-    await s.core.commands.run("blockr.dock-activate_view", { view: "side" });
+    await act(() => s.core.commands.run("blockr.dock-activate_view", { view: "side" }));
     await s.settled();
     expect(s.notes.cleanups()).toBe(2);
     expect(panelFrame(el, EDIT)).toBeNull();
 
-    await s.core.commands.run("blockr.dock-activate_view", { view: "main" });
+    await act(() => s.core.commands.run("blockr.dock-activate_view", { view: "main" }));
     await s.settled();
     expect(s.notes.renders).toHaveLength(3);
 
-    await s.core.store.open(JSON.stringify(HELLO.board));
+    await act(() => s.core.store.open(JSON.stringify(HELLO.board)));
     await s.settled();
     expect(s.notes.cleanups()).toBe(3);
     s.stop();
@@ -631,7 +640,7 @@ describe("a plugin's panel", () => {
       window.removeEventListener("error", report);
       logged.mockRestore();
     });
-    await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: EDIT } });
+    await act(() => s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: EDIT } }));
     await s.settled();
 
     expect(panelFrame(el, EDIT)).toBeNull();
@@ -676,25 +685,25 @@ describe("the tab of a plugin's panel", () => {
 
     let withdrawLost: () => void = () => undefined;
     let withdrawSlow: () => void = () => undefined;
-    flushSync(() => {
+    act(() => {
       withdrawSlow = s.core.notifications.notify(NOTES, slow);
     });
     expect(dotOn(el, "Notes")).toBe("warning");
-    flushSync(() => {
+    act(() => {
       withdrawLost = s.core.notifications.notify(NOTES, lost);
     });
     expect(dotOn(el, "Notes")).toBe("error");
-    flushSync(() => {
+    act(() => {
       withdrawLost();
     });
     expect(dotOn(el, "Notes")).toBe("warning");
-    flushSync(() => {
+    act(() => {
       withdrawSlow();
       s.core.notifications.notify(NOTES, saved);
     });
     expect(dotOn(el, "Notes")).toBeNull();
     // A block's tab shows none, nor does another plugin's.
-    flushSync(() => {
+    act(() => {
       s.core.notifications.notify(EDIT, { ...lost, about: { block: "a" } });
     });
     expect(el.querySelectorAll(".blockr-dock-tab-frame[data-notified]")).toHaveLength(0);
@@ -705,7 +714,7 @@ describe("the tab of a plugin's panel", () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(notesOnRail(true))));
 
-    flushSync(() => {
+    act(() => {
       s.core.notifications.notify(NOTES, lost);
     });
     expect(dotOn(el, "Notes")).toBe("error");
@@ -720,7 +729,7 @@ describe("the tab of a plugin's panel", () => {
     expect(tab.hasAttribute("aria-description")).toBe(false);
 
     let withdraw: () => void = () => undefined;
-    flushSync(() => {
+    act(() => {
       s.core.notifications.notify(NOTES, slow);
       withdraw = s.core.notifications.notify(NOTES, { ...lost, message: "Lost the draft:\n- intro" });
     });
@@ -728,25 +737,33 @@ describe("the tab of a plugin's panel", () => {
 
     // The dock hears these events on dockview's element, outside React, so
     // React draws what they change at a time of its own, after the event.
-    tab.focus();
-    await vi.waitFor(() => {
+    act(() => {
+      tab.focus();
+    });
+    await waitFor(() => {
       expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
     });
-    tab.blur();
-    await vi.waitFor(() => {
+    act(() => {
+      tab.blur();
+    });
+    await waitFor(() => {
       expect(tooltipLines(el)).toBeNull();
     });
 
-    tab.dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));
-    await vi.waitFor(() => {
+    act(() => {
+      tab.dispatchEvent(new PointerEvent("pointerenter", { pointerType: "mouse" }));
+    });
+    await waitFor(() => {
       expect(tooltipLines(el)).toEqual(["Lost the draft:", "- intro", "Saving is slow."]);
     });
-    tab.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse" }));
-    await vi.waitFor(() => {
+    act(() => {
+      tab.dispatchEvent(new PointerEvent("pointerleave", { pointerType: "mouse" }));
+    });
+    await waitFor(() => {
       expect(tooltipLines(el)).toBeNull();
     });
 
-    flushSync(() => {
+    act(() => {
       withdraw();
     });
     expect(tab.getAttribute("aria-description")).toBe("Saving is slow.");
@@ -756,11 +773,13 @@ describe("the tab of a plugin's panel", () => {
   test("has no tooltip while no warning or error about the plugin holds", async () => {
     const el = attached();
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { plugin: NOTES }]))));
-    flushSync(() => {
+    act(() => {
       s.core.notifications.notify(NOTES, saved);
     });
 
-    tabNamed(el, "Notes").focus();
+    act(() => {
+      tabNamed(el, "Notes").focus();
+    });
     await drawn();
     expect(tooltipLines(el)).toBeNull();
     expect(tabNamed(el, "Notes").hasAttribute("aria-description")).toBe(false);
@@ -768,25 +787,11 @@ describe("the tab of a plugin's panel", () => {
   });
 });
 
-// Clicks the button as a pointer does, which goes down on it first.
-function click(button: Element | null | undefined): void {
-  if (button === null || button === undefined) throw new Error("No button to click.");
-  button.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-  button.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
-}
 
-// Presses a key in the element that has the focus.
-function press(key: string): void {
-  document.activeElement?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
-}
 
-// Waits for React to draw what an event changed.
-async function drawn(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-}
 
-// The panel picker that is open, which core's React SDK draws in a portal at
-// the end of the page's body.
+// The panel picker that is open, which blockr.ui draws in a portal at the
+// end of the page's body.
 function picker(): HTMLElement | null {
   return document.querySelector<HTMLElement>(".blockr-dock-picker");
 }
@@ -820,9 +825,13 @@ function searchField(): HTMLInputElement | null {
 // A browser leaves the focus in the search either way.
 async function openByKeyboard(button: HTMLElement | null): Promise<HTMLInputElement> {
   if (button === null) throw new Error("No button opens the picker.");
-  button.focus();
-  button.click();
-  return await vi.waitFor(() => {
+  act(() => {
+    button.focus();
+  });
+  act(() => {
+    button.click();
+  });
+  return await waitFor(() => {
     const search = searchField();
     if (search === null || document.activeElement !== search) throw new Error("The search has not taken the focus.");
     return search;
@@ -842,7 +851,7 @@ describe("the panel picker", () => {
     const buttons = [...el.querySelectorAll(".blockr-dock-add")];
     expect(buttons).toHaveLength(2);
     expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual(["Add panel", "Add panel"]);
-    // The buttons are core's React SDK's, React Aria's.
+    // The buttons are blockr.ui's, React Aria's.
     expect(buttons.every((button) => button.hasAttribute("data-rac"))).toBe(true);
     expect(el.querySelector(".dv-groupview-edge .blockr-dock-add")).toBeNull();
     expect(picker()).toBeNull();
@@ -910,7 +919,7 @@ describe("the panel picker", () => {
     // board refuses it.
     click(el.querySelectorAll(".blockr-dock-add")[0]);
     await drawn();
-    await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { block: "a" } });
+    await act(() => s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { block: "a" } }));
     await s.settled();
     await drawn();
     click(entry("Notes"));
@@ -936,7 +945,7 @@ describe("the panel picker", () => {
     );
     // The picker holds the focus, where Escape closes it.
     expect(document.activeElement).toBe(picker());
-    press("Escape");
+    pressFocused("Escape");
     await drawn();
     expect(picker()).toBeNull();
     s.stop();
@@ -952,27 +961,27 @@ describe("the panel picker", () => {
 
     // The search finds an entry by its name, its block class or its id, and
     // by every word typed.
-    type(search, "set");
+    typeSearch(search, "set");
     await drawn();
     expect(entries()).toEqual([["Dataset", "dataset block"]]);
-    type(search, "tail");
+    typeSearch(search, "tail");
     await drawn();
     expect(entries()).toEqual([["Head", "head/tail block"]]);
-    type(search, "test-notes");
+    typeSearch(search, "test-notes");
     await drawn();
     expect(entries()).toEqual([["Notes"]]);
-    type(search, "BLOCK head");
+    typeSearch(search, "BLOCK head");
     await drawn();
     expect(entries()).toEqual([["Head", "head/tail block"]]);
 
-    type(search, "zzz");
+    typeSearch(search, "zzz");
     await drawn();
     expect(entries()).toEqual([]);
     expect(picker()?.querySelector(".blockr-dock-picker-note")?.textContent).toBe("No panel matches.");
 
-    type(search, "hea");
+    typeSearch(search, "hea");
     await drawn();
-    press("Enter");
+    pressFocused("Enter");
     await s.settled();
     expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }], active: { block: "b" } }]);
     expect(picker()).toBeNull();
@@ -996,13 +1005,13 @@ describe("the panel picker", () => {
       ["ArrowDown", "Dataset"],
       ["ArrowUp", "Notes"],
     ] as const) {
-      press(key);
+      pressFocused(key);
       await drawn();
       expect(active()).toBe(name);
     }
     expect(document.activeElement).toBe(search);
 
-    press("Enter");
+    pressFocused("Enter");
     await s.settled();
     expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "b" }, { plugin: NOTES }], active: { plugin: NOTES } }]);
     s.stop();
@@ -1014,16 +1023,16 @@ describe("the panel picker", () => {
 
     const button = el.querySelector<HTMLElement>(".blockr-dock-add");
     const search = await openByKeyboard(button);
-    type(search, "notes");
+    typeSearch(search, "notes");
     await drawn();
     expect(entries()).toEqual([["Notes"]]);
 
-    press("Escape");
+    pressFocused("Escape");
     await drawn();
     expect(search.value).toBe("");
     expect(entries()).toHaveLength(3);
 
-    press("Escape");
+    pressFocused("Escape");
     await drawn();
     expect(picker()).toBeNull();
     await new Promise((resolve) => requestAnimationFrame(resolve));
@@ -1033,25 +1042,13 @@ describe("the panel picker", () => {
   });
 });
 
-// Types the text into the search field, as the user does, in place of what it
-// held.
-// The browser first tells React Aria that the user inserts text, by the event
-// beforeinput, on which React Aria has the first entry that the search keeps
-// take the virtual focus.
-function type(input: HTMLInputElement | null, text: string): void {
-  if (input === null) throw new Error("No field to type in.");
-  input.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(input, text);
-  input.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
 describe("an empty view", () => {
   test("says to start by adding a panel, with a button that opens the panel picker, whose pick goes to the default place", async () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ plugin: NOTES }]))));
     expect(el.querySelector(".blockr-dock-empty")).toBeNull();
 
-    await s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: NOTES } });
+    await act(() => s.core.commands.run("blockr.dock-remove_panel", { view: "main", panel: { plugin: NOTES } }));
     await s.settled();
     const prompt = el.querySelector(".blockr-dock-empty");
     expect(prompt?.querySelector("p")?.textContent).toBe("Start by adding a panel");
@@ -1100,7 +1097,7 @@ describe("showing a block or a plugin", () => {
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }, { block: "b" }]))));
     expect(showsFrame(el, { block: "a" })).toBe(false);
 
-    await s.core.show({ block: "a" });
+    await act(() => s.core.show({ block: "a" }));
     expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "a" }, { block: "b" }], active: { block: "a" } }]);
     await s.settled();
     expect(showsFrame(el, { block: "a" })).toBe(true);
@@ -1113,7 +1110,7 @@ describe("showing a block or a plugin", () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }]))));
 
-    await s.core.show({ plugin: NOTES });
+    await act(() => s.core.show({ plugin: NOTES }));
     expect(mainGrid(s.core)?.children).toEqual([{ panels: [{ block: "a" }, { plugin: NOTES }], active: { plugin: NOTES } }]);
     expect((s.core.store.board().plugins[DOCK] as DockState).active).toBe("main");
     await s.settled();
@@ -1128,7 +1125,7 @@ describe("showing a block or a plugin", () => {
     const s = await startWithNotes(el, boardWith(dockStateWith(notesOnRail(true))));
     expect(showsFrame(el, { plugin: NOTES })).toBe(false);
 
-    await s.core.show({ plugin: NOTES });
+    await act(() => s.core.show({ plugin: NOTES }));
     expect(mainGrid(s.core)?.rails?.left?.collapsed).toBe(false);
     await s.settled();
     expect(showsFrame(el, { plugin: NOTES })).toBe(true);
@@ -1139,8 +1136,8 @@ describe("showing a block or a plugin", () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]))), true);
 
-    await s.core.show({ block: "b" });
-    await s.core.show({ plugin: NOTES });
+    await act(() => s.core.show({ block: "b" }));
+    await act(() => s.core.show({ plugin: NOTES }));
     expect(mainGrid(s.core)).toEqual(gridWith([{ block: "a" }]));
     expect(s.core.focus.get()).toBe("b");
     expect(s.core.notifications.get()).toEqual([]);
@@ -1151,11 +1148,13 @@ describe("showing a block or a plugin", () => {
     const el = attached();
     const s = await startWithNotes(el, boardWith(dockStateWith({ ...notesOnRail(true), ...gridWith([{ block: "a" }, { block: "b" }]) })));
     const input = attached().appendChild(document.createElement("input"));
-    input.focus();
+    act(() => {
+      input.focus();
+    });
 
-    await s.core.show({ block: "a" });
-    await s.core.show({ plugin: NOTES });
-    await s.core.show({ plugin: EDIT });
+    await act(() => s.core.show({ block: "a" }));
+    await act(() => s.core.show({ plugin: NOTES }));
+    await act(() => s.core.show({ plugin: EDIT }));
     expect(mainGrid(s.core)).toMatchObject({ children: [{ active: { plugin: EDIT } }], rails: { left: { collapsed: false } } });
     expect(document.activeElement).toBe(input);
     s.stop();
@@ -1164,7 +1163,9 @@ describe("showing a block or a plugin", () => {
 
 // Resizes happy-dom's window, which tells its listeners as a browser does.
 function setWindowWidth(width: number): void {
-  (window as unknown as { readonly happyDOM: { setInnerWidth(width: number): void } }).happyDOM.setInnerWidth(width);
+  act(() => {
+    (window as unknown as { readonly happyDOM: { setInnerWidth(width: number): void } }).happyDOM.setInnerWidth(width);
+  });
 }
 
 describe("what is on screen", () => {
@@ -1174,13 +1175,13 @@ describe("what is on screen", () => {
     const s = await startWithNotes(el, boardWith(dockStateWith(main, gridWith([{ block: "a" }, { plugin: EDIT }]))));
     expect(s.core.onScreen.get()).toEqual({ blocks: ["b"], plugins: [NOTES] });
 
-    await s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "a" } });
+    await act(() => s.core.commands.run("blockr.dock-activate_panel", { view: "main", panel: { block: "a" } }));
     expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [NOTES] });
 
-    await s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: true });
+    await act(() => s.core.commands.run("blockr.dock-collapse_rail", { view: "main", edge: "left", collapsed: true }));
     expect(s.core.onScreen.get()).toEqual({ blocks: ["a"], plugins: [] });
 
-    await s.core.commands.run("blockr.dock-activate_view", { view: "side" });
+    await act(() => s.core.commands.run("blockr.dock-activate_view", { view: "side" }));
     expect(s.core.onScreen.get()).toEqual({ blocks: [], plugins: [EDIT] });
     s.stop();
   });
@@ -1209,13 +1210,152 @@ describe("what is on screen", () => {
 // serves the file at, so the path comes in as an argument.
 const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
 
+// The declarations of the dock's stylesheet and of the card's, which it
+// imports, each with the selector of its rule on one line, its property and
+// its value.
+const OWN = [read("./index.css"), read("./card/card.css")]
+  .flatMap((css) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)])
+  .flatMap(([, selector = "", body = ""]) =>
+    [...declarations(body)].map(([property, value]) => ({ selector: selector.trim().replace(/\s+/g, " "), property, value })),
+  );
+
+// The variables that the stylesheet reads beside the theme variables and
+// core's colours of categories and statuses: the card's own, and those that
+// the dock sets on an element as it draws it, as a row's depth.
+const OWN_VARIABLES = ["--blockr-card-inset", "--blockr-card-focus-ring", "--depth", "--drop-depth", "--i"];
+
+// The properties whose values are colours, or hold one, as a border does.
+const COLOURED =
+  /^(?:color|fill|stroke|background(?:-color|-image)?|border(?:-(?:top|right|bottom|left))?(?:-color)?|outline(?:-color)?|box-shadow|--blockr-card-focus-ring|--dv-[\w-]*(?:color|border))$/;
+
+// The dock draws its own pieces with the theme variables of blockr.ui, and
+// keeps every default of them
+// (https://github.com/BristolMyersSquibb/blockr/wiki/Rewrite-1.7.2#the-frontends-own-parts).
+describe("the dock's stylesheet", () => {
+  test("reads the theme variables of blockr.ui's list, and of core's theme only the colours of categories and statuses", () => {
+    const listed = new Set<string>(themeVariables.variables);
+    const reads = new Set(OWN.flatMap(({ value }) => [...value.matchAll(/var\(\s*(--[\w-]+)/g)].map(([, name = ""]) => name)));
+    expect(reads).toContain("--bk-color-card");
+    expect(
+      [...reads].filter((name) => !listed.has(name) && !/^--bc-color-(?:category|status)-/.test(name) && !OWN_VARIABLES.includes(name)),
+    ).toEqual([]);
+  });
+
+  test("sets no theme variable, and of the others only dockview's and the card's own", () => {
+    const sets = new Set(OWN.map(({ property }) => property).filter((name) => name.startsWith("--")));
+    expect([...sets].filter((name) => !name.startsWith("--dv-") && !OWN_VARIABLES.includes(name))).toEqual([]);
+  });
+
+  test("holds no colour of its own, so that each colour is a theme variable, core's colour of a category or a status, or a mix of them", () => {
+    // What a value may hold besides those colours: their mixes, lengths,
+    // percentages and the keywords of the properties.
+    const allowed =
+      /var\(--[\w-]+\)|color-mix\(\s*in oklab,|linear-gradient\(|-?[\d.]+(?:px|%|em|rem)?|\b(?:transparent|currentColor|inherit|none|solid|inset|no-repeat)\b|[\s(),/]/g;
+    const coloured = OWN.filter(({ property }) => COLOURED.test(property));
+    expect(coloured.length).toBeGreaterThan(0);
+    for (const { selector, property, value } of coloured) {
+      expect(value.replace(allowed, ""), `${selector} { ${property}: ${value} }`).toBe("");
+    }
+  });
+
+  test("keys what it draws beyond the jobs on data-bk-mode, the mode that dark_mode sets on the page's root", () => {
+    const modes = new Set(OWN.flatMap(({ selector }) => [...selector.matchAll(/\[data-b[ck]-(?:mode|theme)[^\]]*\]/g)].map(([key]) => key)));
+    expect([...modes]).toEqual(['[data-bk-mode="dark"]']);
+    expect(read("./index.css") + read("./card/card.css")).not.toMatch(/prefers-color-scheme/);
+    // The card's focus ring, which is fainter in light mode.
+    const ring = (selector: string) => OWN.find((rule) => rule.selector === selector && rule.property === "--blockr-card-focus-ring")?.value;
+    expect(ring(".blockr-card")).toBe("0 0 0 3px color-mix(in oklab, var(--bk-color-ring) 12%, transparent)");
+    expect(ring('[data-bk-mode="dark"] .blockr-card')).toBe("0 0 0 3px color-mix(in oklab, var(--bk-color-ring) 28%, transparent)");
+  });
+
+  test("takes each face, size of text and radius from the theme variables", () => {
+    for (const { selector, property, value } of OWN) {
+      const at = `${selector} { ${property}: ${value} }`;
+      if (property === "font-family") expect(value, at).toMatch(/^var\(--bk-font-(?:sans|mono)\)$/);
+      if (property === "font") expect(value, at).toBe("inherit");
+      // The mark sizes its icon, SVG markup sized in em, by its font size,
+      // which stays in pixels, as the mark's own sizes do.
+      if (property === "font-size" && !selector.includes(".blockr-card-mark")) {
+        expect(value, at).toMatch(/^var\(--bk-text-(?:xs|sm|base|lg)\)$/);
+      }
+      // A pill and a dot keep their round ends under any radius.
+      if (property.endsWith("radius") && !["50%", "999px"].includes(value)) expect(value, at).toMatch(/var\(--bk-radius\)/);
+    }
+  });
+
+  // The multiples of the unit, --bk-spacing, that the stylesheet takes: those
+  // of its paddings, margins, gaps and offsets, those of the heights of its
+  // controls and rows, and the heights of the bar, of the line of tabs under
+  // it and of both, which the dock's root, the narrow column and the sidebar's
+  // header make room for or match.
+  const SPACING = [0.5, 1, 1.5, 2, 2.5, 3, 4, 8];
+  const HEIGHTS = [5, 6, 7.5, 8];
+  const FRAME = [10, 12, 22];
+
+  test("puts each padding, margin, gap and offset on a listed multiple of --bk-spacing, and each height of a control or a row on a listed height", () => {
+    const sizes = /^(?:min-)?(?:height|width)$|^line-height$/;
+    const reads = OWN.flatMap(({ selector, property, value }) => {
+      const at = `${selector} { ${property}: ${value} }`;
+      // Each read of the unit multiplies it, so that the test sees each multiple.
+      expect(value.match(/var\(--bk-spacing\)/g)?.length ?? 0, at).toBe(value.match(/var\(--bk-spacing\) \* -?[\d.]+/g)?.length ?? 0);
+      return [...value.matchAll(/var\(--bk-spacing\) \* (-?[\d.]+)/g)].map(([, n = ""]) => ({ at, property, n: Math.abs(Number(n)) }));
+    });
+    expect(reads.length).toBeGreaterThan(100);
+    for (const { at, property, n } of reads) {
+      expect(sizes.test(property) ? [...HEIGHTS, ...FRAME] : [...SPACING, ...FRAME], at).toContain(n);
+    }
+  });
+
+  test("keeps pixels in no padding, margin, gap or height but those of the drawings, the hairlines and the offsets that blockr.ui and dockview take in pixels", () => {
+    const spacing = /^(?:padding|margin|gap|row-gap|column-gap)(?:-[\w-]+)?$/;
+    const heights = /^(?:min-)?height$/;
+    // Where pixels stay: the margin of what only a screen reader hears, the
+    // offsets of a menu from its button, as blockr.ui's popovers take theirs
+    // in script, the room that the narrow column makes for the pinned
+    // sidebar, whose width stays in pixels, and dockview's margin between a
+    // tab's name and its close button, which a rail's tab moves.
+    const offsets = [
+      ".blockr-dock-visually-hidden",
+      ".blockr-dock-menu",
+      '.blockr-dock-menu:not([data-depth="0"])',
+      '.blockr-dock[data-layout="narrow"][data-pushed]',
+      ".blockr-dock .dv-tabs-container-vertical .dv-default-tab-content",
+    ];
+    // The drawings, whose heights stay in pixels: the marks, the dots, the
+    // line where a drag would land, a rule, and the output, at whose height
+    // a plot is drawn.
+    const drawings = /\.blockr-card-mark|\.blockr-card-dot|::before|::after|\.blockr-dock-visually-hidden|\.blockr-dock-menu-divider|^\.blockr-card-output$/;
+    for (const { selector, property, value } of OWN) {
+      const at = `${selector} { ${property}: ${value} }`;
+      // A hairline: the 1px edge of a field, which the margin of its frame
+      // pulls back with its padding, or the 1px rule between a card's
+      // sections, which the outputs' padding makes room for.
+      const pixels = value.replace(/ [+-] 1px\)/g, ")").match(/-?[\d.]+(?:px|rem)\b/g) ?? [];
+      if (spacing.test(property) && !offsets.includes(selector)) expect(pixels, at).toEqual([]);
+      if (heights.test(property) && !drawings.test(selector)) expect(pixels, at).toEqual([]);
+    }
+  });
+
+  test("draws each shadow from a theme variable, and its rings and lines without a blur", () => {
+    const shadows = OWN.filter(({ property }) => property === "box-shadow" || property === "--blockr-card-focus-ring");
+    expect(shadows.map(({ value }) => value)).toContain("var(--bk-shadow-md)");
+    for (const { selector, property, value } of shadows) {
+      if (/^var\(--(?:bk-shadow-(?:sm|md|lg)|blockr-card-focus-ring)\)$/.test(value)) continue;
+      // Each layer of the shadow, outside the commas of its colour's mix: its
+      // offsets, then its blur.
+      for (const layer of value.split(/,(?![^(]*\))/)) {
+        const lengths = [...layer.matchAll(/(?<![\w-])-?[\d.]+(?:px)?(?![\w%.])/g)].map(([length]) => parseFloat(length));
+        expect(lengths[2] ?? 0, `${selector} { ${property}: ${value} }`).toBe(0);
+      }
+    }
+  });
+});
+
 // The colour variables that dockview's light-spaced theme sets otherwise than
-// its dark abyss-spaced theme, which would show a light value under the dark
-// theme unless the bridge sets them, as blockr.dock#502 asks a test to catch.
-describe("the bridge from blockr.ui's tokens to dockview's theme", () => {
+// its dark abyss-spaced theme, which would show a light value in dark mode
+// unless the bridge sets them, as blockr.dock#502 asks a test to catch.
+describe("the bridge from the theme variables to dockview's theme", () => {
   const dockview = read("../../../node_modules/dockview-react/dist/styles/dockview.css");
-  // The dock's stylesheet with the card's, which it imports.
-  const own = read("./index.css") + read("./card/card.css");
 
   // The custom properties that the rules of a selector set, each with its
   // last value, as the cascade gives it for rules of equal specificity.
@@ -1231,57 +1371,42 @@ describe("the bridge from blockr.ui's tokens to dockview's theme", () => {
 
   const light = properties(dockview, ".dockview-theme-light-spaced");
   const dark = properties(dockview, ".dockview-theme-abyss-spaced");
-  const bridged = properties(own, ".blockr-dock .dv-shell");
-  const darkBridged = properties(own, '[data-bc-theme="dark"] .blockr-dock .dv-shell');
+  const bridged = properties(read("./index.css"), ".blockr-dock .dv-shell");
 
   // What the dock does not use: floating groups, which it does not offer,
   // and the palette of the abyss themes, which no variable of the
   // light-spaced theme reads.
   const unused = (name: string) => name.startsWith("--dv-floating-") || name.startsWith("--dv-color-abyss");
 
-  test("sets under the dark theme each colour of the light-spaced theme that the dark theme sets otherwise", () => {
+  test("sets each colour of the light-spaced theme that the dark theme sets otherwise, in both modes at once", () => {
     const differing = [...new Set([...light.keys(), ...dark.keys()])].filter((name) => light.get(name) !== dark.get(name) && !unused(name));
     expect(differing.length).toBeGreaterThan(0);
-    expect(differing.filter((name) => !darkBridged.has(name))).toEqual([]);
+    expect(differing.filter((name) => !bridged.has(name))).toEqual([]);
+    // The theme variables carry both modes, so no rule sets the bridge again
+    // for dark mode.
+    expect(OWN.filter(({ selector }) => selector.includes(".dv-shell") && selector.includes("data-bk-mode"))).toEqual([]);
   });
 
-  test("reads each token with a fallback, its light value under the light theme and its dark value under the dark theme", () => {
-    for (const [name, value] of [...bridged, ...darkBridged]) {
-      for (const [, token = "", fallback] of value.matchAll(/var\(\s*(--blockr-[\w-]+)\s*(?:,\s*([^)]+))?/g)) {
-        expect(fallback, `${name} reads ${token}`).toBeDefined();
-      }
-    }
-    for (const name of bridged.keys()) expect(darkBridged.has(name), name).toBe(true);
-    expect(bridged.get("--dv-group-view-background-color")).toBe("var(--blockr-color-bg-page, #f9fafb)");
-    expect(darkBridged.get("--dv-group-view-background-color")).toBe("var(--blockr-color-bg-page, #0e1219)");
+  test("draws the page behind the panels in the background, a group's header as a card, and the frame in the larger radius of the panels", () => {
+    expect(bridged.get("--dv-group-view-background-color")).toBe("var(--bk-color-background)");
+    expect(bridged.get("--dv-tabs-and-actions-container-background-color")).toBe("var(--bk-color-card)");
+    expect(bridged.get("--dv-border-radius")).toBe("calc(var(--bk-radius) * 1.4)");
   });
 
-  // The variables that the dock's own pieces read, the "+" of a tab group, the
-  // prompt of an empty view, the panel picker, the bar with its menus and the
-  // options sidebar, under each theme.
-  const pieces = properties(own, ".blockr-dock");
-  const darkPieces = properties(own, '[data-bc-theme="dark"] .blockr-dock');
-
-  test("gives the dock's own pieces each token with a fallback, its light value under the light theme and its dark value under the dark theme", () => {
-    expect(pieces.size).toBeGreaterThan(0);
-    expect([...darkPieces.keys()]).toEqual([...pieces.keys()]);
-    for (const [name, value] of [...pieces, ...darkPieces]) expect(value, name).toMatch(/^var\(\s*--blockr-[\w-]+\s*,/);
-    expect(pieces.get("--blockr-dock-bg-raised")).toBe("var(--blockr-color-bg-raised, #ffffff)");
-    expect(darkPieces.get("--blockr-dock-bg-raised")).toBe("var(--blockr-color-bg-raised, #1e242e)");
-    // The bar and the options sidebar sit beside the dock's root, and take the
-    // same variables.
-    expect(properties(own, ".blockr-dock-bar")).toEqual(pieces);
-    expect(properties(own, '[data-bc-theme="dark"] .blockr-dock-bar')).toEqual(darkPieces);
-    expect(properties(own, ".blockr-dock-sidebar")).toEqual(pieces);
-    expect(properties(own, '[data-bc-theme="dark"] .blockr-dock-sidebar')).toEqual(darkPieces);
-
-    // A rule reads no variable of the dock's that neither theme sets, and every
-    // token that it reads itself, as a radius, with a fallback.
-    const used = [...own.matchAll(/var\((--blockr-dock-[\w-]+)/g)].map(([, name = ""]) => name);
-    expect(used.filter((name) => !pieces.has(name))).toEqual([]);
-    for (const [, token = "", fallback] of own.matchAll(/var\(\s*(--(?:blockr|bc)-(?!dock-)[\w-]+)\s*(?:,\s*([^)]+))?/g)) {
-      expect(fallback, token).toBeDefined();
-    }
+  test("sizes the text of the tabs and the headers from the theme variables, and leaves the spacing to dockview, whose script sizes the gaps between groups and a collapsed rail in pixels", () => {
+    // Dockview's sizes of text, 12px and 13px, are those of the two steps at
+    // the defaults.
+    expect(light.get("--dv-tab-font-size")).toBe("12px");
+    expect(bridged.get("--dv-tab-font-size")).toBe("var(--bk-text-xs)");
+    expect(light.get("--dv-tabs-and-actions-container-font-size")).toBe("13px");
+    expect(bridged.get("--dv-tabs-and-actions-container-font-size")).toBe("var(--bk-text-sm)");
+    // The theme object hands dockview's script the gap between groups and the
+    // size of a collapsed rail, which match the room around the groups and the
+    // height of a group's header in its stylesheet.
+    expect(`${String(themeLightSpaced.gap)}px`).toBe(light.get("--dv-spacing-padding"));
+    expect(`${String(themeLightSpaced.edgeGroupCollapsedSize)}px`).toBe(light.get("--dv-tabs-and-actions-container-height"));
+    const spacing = ["--dv-spacing-padding", "--dv-tabs-and-actions-container-height", "--dv-tab-margin", "--dv-tab-margin-block", "--dv-tab-margin-inline"];
+    expect(spacing.filter((name) => bridged.has(name))).toEqual([]);
   });
 });
 
@@ -1329,7 +1454,7 @@ describe("the toasts", () => {
     expect(core.notifications.get().some((n) => n.source.kind === "r" && n.message === "Few rows.")).toBe(true);
 
     let crowded: () => void = () => undefined;
-    flushSync(() => {
+    act(() => {
       core.notifications.notify(DOCK, { severity: "message", code: "saved", message: "Saved." });
       // What a plugin raises about a block shows on the block's card.
       core.notifications.notify(DOCK, { severity: "error", code: "not_placed", message: "Not placed.", about: { block: "b" } });
@@ -1345,12 +1470,12 @@ describe("the toasts", () => {
     // The toasts sit beside the dock's root, outside it.
     expect(el.querySelector(".blockr-dock .blockr-dock-toasts")).toBeNull();
 
-    flushSync(() => {
+    act(() => {
       closeButton(toastWithMessage(el, "Not shared.")).click();
     });
     expect(messages(el)).toEqual(["Saved.", "The view is crowded."]);
     expect(core.notifications.get().some((n) => n.message === "Not shared.")).toBe(true);
-    flushSync(() => {
+    act(() => {
       crowded();
     });
     expect(messages(el)).toEqual(["Saved."]);
@@ -1363,7 +1488,7 @@ describe("the toasts", () => {
     // which is active, holds none.
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }, { block: "b" }]))));
 
-    flushSync(() => {
+    act(() => {
       s.core.notifications.notify(NOTES, lost);
       s.core.notifications.notify(NOTES, saved);
     });
@@ -1386,7 +1511,7 @@ describe("the toasts", () => {
     expect(dotOn(el, "Notes")).toBe("error");
 
     // Back on main, the toasts come back.
-    await s.core.commands.run("blockr.dock-activate_view", { view: "main" });
+    await act(() => s.core.commands.run("blockr.dock-activate_view", { view: "main" }));
     await s.settled();
     expect(messages(el)).toEqual(["Lost the draft.", "Saved."]);
     s.stop();
@@ -1396,7 +1521,7 @@ describe("the toasts", () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ block: "b" }]))));
 
-    flushSync(() => {
+    act(() => {
       s.core.notifications.notify(NOTES, lost);
     });
     click(toastWithMessage(el, "Lost the draft.").querySelector("button.blockr-dock-toast-link"));
@@ -1411,7 +1536,7 @@ describe("the toasts", () => {
   test("give no link on a locked board where no view holds the panel, since a locked dock adds none, and one where a view holds it", async () => {
     const el = document.createElement("div");
     const s = await startWithNotes(el, boardWith(dockStateWith(gridWith([{ block: "a" }]))), true);
-    flushSync(() => {
+    act(() => {
       s.core.notifications.notify(NOTES, lost);
     });
     expect(messages(el)).toEqual(["Lost the draft."]);
@@ -1420,7 +1545,7 @@ describe("the toasts", () => {
 
     const other = document.createElement("div");
     const t = await startWithNotes(other, boardWith(dockStateWith(gridWith([{ block: "a" }]), gridWith([{ plugin: NOTES }]))), true);
-    flushSync(() => {
+    act(() => {
       t.core.notifications.notify(NOTES, lost);
     });
     click(toastWithMessage(other, "Lost the draft.").querySelector("button.blockr-dock-toast-link"));
@@ -1446,7 +1571,7 @@ describe("the toasts", () => {
     const { core, settled, stop } = await startDock(el);
     await settled();
 
-    flushSync(() => {
+    act(() => {
       core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "<b>Not</b> saved." });
     });
     expect(messages(el)).toEqual(["<b>Not</b> saved."]);
@@ -1462,28 +1587,28 @@ describe("the toasts", () => {
     await settled();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
-      flushSync(() => {
+      act(() => {
         core.notifications.notify(DOCK, { severity: "message", code: "saved", message: "Saved." });
         core.notifications.notify(DOCK, { severity: "error", code: "share_failed", message: "Not shared." });
       });
       const saved = toastWithMessage(el, "Saved.");
-      flushSync(() => {
+      act(() => {
         saved.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
         vi.advanceTimersByTime(60_000);
       });
-      flushSync(() => {
+      act(() => {
         closeButton(saved).focus();
         saved.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
         vi.advanceTimersByTime(60_000);
       });
       expect(messages(el)).toEqual(["Saved.", "Not shared."]);
 
-      flushSync(() => {
+      act(() => {
         closeButton(saved).blur();
         vi.advanceTimersByTime(SHOWN_FOR);
       });
       expect(toastWithMessage(el, "Saved.").hasAttribute("data-fading")).toBe(true);
-      flushSync(() => {
+      act(() => {
         vi.advanceTimersByTime(FADES_FOR);
       });
       expect(messages(el)).toEqual(["Not shared."]);
@@ -1497,21 +1622,23 @@ describe("the toasts", () => {
   test("go with what the frontend drew in its cleanup, which leaves the notifications unfollowed", async () => {
     const s = await startDock();
     const el = document.createElement("div");
-    const cleanup = await dock.default.frontend.render({
+    const cleanup = await act(() => dock.default.frontend.render({
       el,
       core: s.core,
       plugin: DOCK,
       signal: new AbortController().signal,
       args: {},
-    });
-    flushSync(() => {
+    }));
+    act(() => {
       s.core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "Failed." });
     });
     expect(messages(el)).toEqual(["Failed."]);
 
-    cleanup?.();
+    act(() => {
+      cleanup?.();
+    });
     expect(el.childElementCount).toBe(0);
-    flushSync(() => {
+    act(() => {
       s.core.notifications.notify(DOCK, { severity: "error", code: "failed", message: "Failed again." });
     });
     expect(el.childElementCount).toBe(0);
@@ -1520,43 +1647,25 @@ describe("the toasts", () => {
 });
 
 describe("the stylesheet of the toasts", () => {
-  // The declarations of each rule of the toasts, by the rule's selector.
-  const rules = new Map(
-    [...read("./index.css").matchAll(/([^{}]+)\{([^{}]*)\}/g)]
-      .map(([, selector = "", body = ""]) => [selector.trim(), declarations(body)] as const)
-      .filter(([selector]) => selector.includes(".blockr-dock-toast")),
-  );
-  const dark = '[data-bc-theme="dark"] ';
+  // The declarations of the rules of the toasts, by the rules' selector, as
+  // the cascade gives them where two rules share a selector, as the rule that
+  // drops the transition under reduced motion shares the toast's.
+  const rules = new Map<string, Map<string, string>>();
+  for (const [, selector = "", body = ""] of read("./index.css").matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const key = selector.trim();
+    if (key.includes(".blockr-dock-toast")) rules.set(key, new Map([...(rules.get(key) ?? []), ...declarations(body)]));
+  }
 
-  // Whether a value reads one of blockr.ui's tokens whose value differs
-  // between the light scheme and the dark scheme: a colour, a shadow or the
-  // focus outline.
-  const themed = (value: string) => /var\(\s*--blockr-(?:color|shadow|focus-outline)/.test(value);
-
-  test("reads each token with a fallback", () => {
-    expect(rules.size).toBeGreaterThan(0);
-    for (const [selector, declared] of rules) {
-      for (const [name, value] of declared) {
-        for (const [, token = "", fallback] of value.matchAll(/var\(\s*(--blockr-[\w-]+)\s*(?:,\s*([^)]+))?/g)) {
-          expect(fallback, `${selector} { ${name} } reads ${token}`).toBeDefined();
-        }
-      }
-    }
-  });
-
-  test("restates under the dark theme each value that reads a token of the light scheme, with the token's dark value as the fallback", () => {
-    const light = [...rules].filter(([selector]) => !selector.startsWith(dark));
-    expect(light.length).toBeGreaterThan(0);
-    for (const [selector, declared] of light) {
-      for (const [name, value] of declared) {
-        if (!themed(value)) continue;
-        const restated = rules.get(`${dark}${selector}`)?.get(name);
-        expect(restated, `${selector} { ${name} }`).toBeDefined();
-        expect(restated, `${selector} { ${name} }`).not.toBe(value);
-      }
-    }
-    expect(rules.get('.blockr-dock-toast[data-severity="error"]')?.get("color")).toBe("var(--blockr-color-text-danger, #b91c1c)");
-    expect(rules.get(`${dark}.blockr-dock-toast[data-severity="error"]`)?.get("color")).toBe("var(--blockr-color-text-danger, #f87171)");
+  test("draws a message's toast as a popover, and an error's and a warning's in the colours of destructive and warning, tinted over the popover", () => {
+    const toast = rules.get(".blockr-dock-toast");
+    expect(toast?.get("background-color")).toBe("var(--bk-color-popover)");
+    expect(toast?.get("color")).toBe("var(--bk-color-popover-foreground)");
+    const error = rules.get('.blockr-dock-toast[data-severity="error"]');
+    expect(error?.get("color")).toBe("var(--bk-color-destructive-text)");
+    expect(error?.get("background-image")).toMatch(/^linear-gradient\(\s*color-mix\(in oklab, var\(--bk-color-destructive\) 10%, transparent\)/);
+    const warning = rules.get('.blockr-dock-toast[data-severity="warning"]');
+    expect(warning?.get("color")).toBe("var(--bk-color-warning-text)");
+    expect(warning?.get("background-image")).toMatch(/^linear-gradient\(\s*color-mix\(in oklab, var\(--bk-color-warning\) 10%, transparent\)/);
   });
 });
 
@@ -1569,27 +1678,14 @@ describe("the stylesheet of the dot on a plugin's tab", () => {
   );
   const dot = ".dv-default-tab-content::before";
 
-  test("puts the dot before the plugin's name, 6px from it, so that the name keeps it apart from the close button", () => {
-    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-end")).toBe("6px");
+  test("puts the dot before the plugin's name, 1.5 units of the spacing from it, so that the name keeps it apart from the close button", () => {
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-end")).toBe("calc(var(--bk-spacing) * 1.5)");
     expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("margin-inline-start")).toBeUndefined();
   });
 
-  test("draws the dot in the dock's danger colour for an error and in its amber for a warning", () => {
-    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("background-color")).toBe("var(--blockr-dock-border-danger)");
-    expect(rules.get(`.blockr-dock-tab-frame[data-notified="warning"] ${dot}`)?.get("background-color")).toBe(
-      "var(--blockr-dock-border-warning)",
-    );
-  });
-
-  test("takes the amber from blockr.ui's token, with its value in each scheme as the fallback", () => {
-    const light = rules.get(".blockr-dock, .blockr-dock-bar, .blockr-dock-sidebar, .blockr-card-menu, .blockr-dock-picker");
-    const dark = rules.get(
-      '[data-bc-theme="dark"] .blockr-dock, [data-bc-theme="dark"] .blockr-dock-bar, [data-bc-theme="dark"] .blockr-dock-sidebar, [data-bc-theme="dark"] .blockr-card-menu, [data-bc-theme="dark"] .blockr-dock-picker',
-    );
-    expect(light?.get("--blockr-dock-border-warning")).toBe("var(--blockr-color-border-warning, #d97706)");
-    expect(dark?.get("--blockr-dock-border-warning")).toBe("var(--blockr-color-border-warning, #fbbf24)");
-    expect(light?.get("--blockr-dock-border-danger")).toBe("var(--blockr-color-border-danger, #dc2626)");
-    expect(dark?.get("--blockr-dock-border-danger")).toBe("var(--blockr-color-border-danger, #f87171)");
+  test("draws the dot in destructive for an error and in warning for a warning", () => {
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified] ${dot}`)?.get("background-color")).toBe("var(--bk-color-destructive)");
+    expect(rules.get(`.blockr-dock-tab-frame[data-notified="warning"] ${dot}`)?.get("background-color")).toBe("var(--bk-color-warning)");
   });
 });
 

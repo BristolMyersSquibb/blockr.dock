@@ -73,6 +73,12 @@
 #' The dock takes them through its method of [blockr.core::frontend_args()]
 #' (see [default_navbar()]).
 #'
+#' The dock draws its cards, its navbar, its options sidebar and the frame of
+#' its panels with the theme variables of blockr.ui, and keeps the default of
+#' each, since its look is blockr.ui's.
+#' So the class has no method of [blockr.core::frontend_theme()], and takes
+#' core's, which returns a theme with no values.
+#'
 #' The dock reads four board options: its own, `compact`, `view_tabs` and
 #' `sync_rails` (see [new_compact_option()]), and core's `dark_mode`.
 #' The class names them through its method of [blockr.core::plugin_options()],
@@ -83,6 +89,16 @@
 #' The package lists each of its own board options in `._BLOCKR_MODULES_`
 #' too, with its module, as `js/compact-option.js`, beside which the schema of
 #' its value ships, as `js/compact-option.schema.json`.
+#'
+#' The package also offers blockr.assistant a module named `assistant`, in the
+#' `modules` of its `._BLOCKR_MODULES_`, so that the module's id is
+#' `blockr.dock-assistant`.
+#' As each call of the assistant's model goes out, the module tells the model
+#' what the dock's state holds.
+#' It names the active view, and lists each view in the order of the views
+#' menu, with the panels that its grid places.
+#' The dock needs no dependency on blockr.assistant for this, as for its skill
+#' `layout`, which it ships in `inst/assistant/skills`.
 #'
 #' @param views The views, each written with [dock_view()], by id, or `NULL`
 #'   for none.
@@ -279,5 +295,8 @@ format.dock_plugin <- function(x, ...) {
     compact = list(module = "js/compact-option.js"),
     view_tabs = list(module = "js/view-tabs-option.js"),
     sync_rails = list(module = "js/sync-rails-option.js")
+  ),
+  modules = list(
+    assistant = "js/assistant.js"
   )
 )

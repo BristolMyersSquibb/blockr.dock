@@ -9,11 +9,13 @@
 
 import type { CoreApi, Json, LogLine, PluginClass, StorageControl } from "@blockr/core";
 import { HELLO, stubCore } from "@blockr/core/stubs";
+import { act } from "react";
 import { beforeAll, describe, expect, onTestFinished, test } from "vitest";
 import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
+import { blockModules, click, drawn, expectedErrors, pressOn, typeInto } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 const BASIC = "blockr.core-basic_frontend_plugin";
@@ -68,6 +70,7 @@ async function startBar(options: BarOptions = {}) {
     compact: compactOption,
     view_tabs: viewTabsOption,
     sync_rails: syncRailsOption,
+    ...blockModules,
     ...(options.storageClass === undefined ? {} : { [STORAGE]: { api: 1, default: options.storageClass } }),
     ...options.modules,
   };
@@ -171,7 +174,9 @@ function everyKind() {
   };
   const setSaved = (text: string) => {
     saved = text;
-    for (const fn of [...listeners]) fn();
+    act(() => {
+      for (const fn of [...listeners]) fn();
+    });
   };
   return { runs, storageClass, setSaved, listeners };
 }
@@ -224,10 +229,13 @@ describe("the bar", () => {
   });
 
   test("fails to draw, naming the item, where R sends a navbar item that the dock cannot draw", async () => {
+    // Core logs that the frontend failed.
+    const taken = expectedErrors(/failed in render\(\)/);
     const { el } = await startBar({ navbar: [{ kind: "part", id: "clock" }] });
 
     expect(el.textContent).toContain('The dock has no part "clock" to draw on the navbar.');
     expect(el.querySelector(".blockr-dock")).toBeNull();
+    expect(taken).toHaveLength(1);
   });
 });
 
@@ -246,7 +254,7 @@ describe("the storage plugin's controls on the bar", () => {
       "NJ",
     ]);
 
-    // A button is a quiet button, the Button of core's React SDK, greyed out
+    // A button is a quiet button, the Button of blockr.ui, greyed out
     // while it is disabled, with its tooltip where it has one.
     const share = button(storage, "Share");
     expect(share.classList).toContain("blockr-dock-bar-button");
@@ -304,11 +312,15 @@ describe("the storage plugin's controls on the bar", () => {
     // The row that a menu names as its active descendant.
     const active = (menu: Element | null) => document.getElementById(menu?.getAttribute("aria-activedescendant") ?? "")?.textContent;
     const keyOn = (target: Element | null, key: string) => {
-      target?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+      act(() => {
+        target?.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+      });
     };
 
     const opener = button(storage, "Workflow one");
-    opener.focus();
+    act(() => {
+      opener.focus();
+    });
     keyOn(opener, "ArrowDown");
     await drawn();
     const menu = el.querySelector('[role="menu"][aria-label="Workflow one"]');
@@ -364,15 +376,17 @@ describe("the storage plugin's controls on the bar", () => {
     const { runs, storageClass } = everyKind();
     const { el } = await startBar({ storage: "test", storageClass });
 
-    pressOnPage({ key: "s", ctrlKey: true });
-    pressOnPage({ key: "o", metaKey: true });
-    pressOnPage({ key: "e", ctrlKey: true });
-    pressOnPage({ key: "s", ctrlKey: true, repeat: true });
+    pressOn(document.body, "s", { ctrlKey: true });
+    pressOn(document.body, "o", { metaKey: true });
+    pressOn(document.body, "e", { ctrlKey: true });
+    pressOn(document.body, "s", { ctrlKey: true, repeat: true });
     expect(runs).toEqual(["save", "open-a"]);
 
     const field = document.createElement("input");
     el.append(field);
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true }));
+    act(() => {
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "s", ctrlKey: true, bubbles: true }));
+    });
     expect(runs).toEqual(["save", "open-a"]);
   });
 
@@ -381,12 +395,14 @@ describe("the storage plugin's controls on the bar", () => {
     const { el } = await startBar({ storage: "test", storageClass, navbar: [{ kind: "storage", id: "save" }] });
 
     expect(barItems(el)).toEqual(["button:Save"]);
-    pressOnPage({ key: "o", ctrlKey: true });
-    pressOnPage({ key: "s", ctrlKey: true });
+    pressOn(document.body, "o", { ctrlKey: true });
+    pressOn(document.body, "s", { ctrlKey: true });
     expect(runs).toEqual(["save"]);
   });
 
   test("log a run() that rejects, while the storage plugin tells the user why through a notification of its own", async () => {
+    // The dock logs the run() that rejects.
+    const taken = expectedErrors(/HTTP 503/);
     let core: CoreApi | undefined;
     const storageClass: Omit<PluginClass, "id"> = {
       storage: {
@@ -415,9 +431,12 @@ describe("the storage plugin's controls on the bar", () => {
     const toasts = [...document.querySelectorAll(".blockr-dock-toast")].map((t) => t.textContent);
     expect(toasts.filter((t) => t.includes("Connect is down."))).toHaveLength(1);
     expect(toasts.some((t) => t.includes("HTTP 503"))).toBe(false);
+    expect(taken).toHaveLength(1);
   });
 
   test("leave a warning in their place where controls() throws, which names the plugin's package", async () => {
+    // The dock logs the controls() that throws.
+    const taken = expectedErrors(/No token\./);
     const storageClass: Omit<PluginClass, "id"> = {
       storage: {
         controls: () => {
@@ -432,9 +451,12 @@ describe("the storage plugin's controls on the bar", () => {
     expect(warning?.title).toContain("No token.");
     expect(barItems(s.el)).toEqual(["logo", "name", "warning", "undo_redo", "spacer", "views", "options"]);
     expect(errors(s.logged, "blockr.dock").filter((m) => m.includes("No token."))).toHaveLength(1);
+    expect(taken).toHaveLength(1);
   });
 
   test("draw the first of two controls of one list that share an id, and log the second", async () => {
+    // The dock logs the second control.
+    const taken = expectedErrors(/share the ids "save"/);
     const run = () => Promise.resolve();
     const storageClass: Omit<PluginClass, "id"> = {
       storage: {
@@ -448,6 +470,7 @@ describe("the storage plugin's controls on the bar", () => {
 
     expect(s.el.querySelector(".blockr-dock-bar-storage")?.textContent).toBe("Save");
     expect(errors(s.logged, "blockr.dock").filter((m) => m.includes('"save"'))).toHaveLength(1);
+    expect(taken).toHaveLength(1);
   });
 
   test("give way first on a narrow bar, with a label cut short in full as the tooltip, where the control has none", async () => {
@@ -465,7 +488,9 @@ describe("the storage plugin's controls on the bar", () => {
     for (const control of [menu, avatar, saved]) {
       if (control === undefined || control === null) throw new Error("No control.");
       cutShort(control);
-      control.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+      act(() => {
+        control.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+      });
     }
     expect(menu.title).toBe("Workflow one");
     expect(avatar?.title).toBe("NJ");
@@ -511,6 +536,8 @@ describe("a module on the bar", () => {
   });
 
   test("leaves a warning that names the module where it fails to load, declares another major or throws, and the rest of the bar works", async () => {
+    // The dock logs each module that cannot draw.
+    const taken = expectedErrors(/cannot draw/);
     const navbar: Json[] = [
       { kind: "part", id: "logo" },
       { kind: "module", id: "missing", module: "blockr.test-missing" },
@@ -544,6 +571,7 @@ describe("a module on the bar", () => {
     click(button(dockBar(s.el), "Options"));
     await drawn();
     expect(button(dockBar(s.el), "Options").getAttribute("aria-expanded")).toBe("true");
+    expect(taken).toHaveLength(3);
   });
 });
 
@@ -559,8 +587,10 @@ describe("the dock's own parts", () => {
     const field = dockBar(el).querySelector<HTMLInputElement>("input.blockr-dock-bar-field");
     if (field === null) throw new Error("No field.");
     expect(document.activeElement).toBe(field);
-    type(field, "  Quarterly  ");
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    typeInto(field, "  Quarterly  ");
+    act(() => {
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    });
     await drawn();
 
     expect(core.store.board().name).toBe("Quarterly");
@@ -580,8 +610,10 @@ describe("the dock's own parts", () => {
       await drawn();
       const field = dockBar(el).querySelector<HTMLInputElement>("input.blockr-dock-bar-field");
       if (field === null) throw new Error("No field.");
-      type(field, text);
-      field.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      typeInto(field, text);
+      act(() => {
+        field.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+      });
       await drawn();
     }
     expect(core.store.board().name).toBe(before);
@@ -594,7 +626,7 @@ describe("the dock's own parts", () => {
     const undo = button(dockBar(el), "Undo");
     const redo = button(dockBar(el), "Redo");
     // Both show their labels, as the storage plugin's buttons beside them do,
-    // and both are the Button of core's React SDK.
+    // and both are the Button of blockr.ui.
     expect([undo.textContent, redo.textContent]).toEqual(["Undo", "Redo"]);
     expect([undo.hasAttribute("data-rac"), redo.hasAttribute("data-rac")]).toEqual([true, true]);
     expect(undo.disabled).toBe(true);
@@ -604,7 +636,7 @@ describe("the dock's own parts", () => {
     expect(undo.getAttribute("aria-keyshortcuts")).toBe("Control+Z Meta+Z");
     expect(redo.getAttribute("aria-keyshortcuts")).toBe("Control+Shift+Z Meta+Shift+Z Control+Y");
 
-    await core.commands.run("blockr.core-change_board", { name: "Renamed" });
+    await act(() => core.commands.run("blockr.core-change_board", { name: "Renamed" }));
     await drawn();
     expect(undo.disabled).toBe(false);
 
@@ -613,16 +645,18 @@ describe("the dock's own parts", () => {
     expect(core.store.board().name).toBe(before);
     expect(redo.disabled).toBe(false);
 
-    pressOnPage({ key: "z", ctrlKey: true, shiftKey: true });
+    pressOn(document.body, "z", { ctrlKey: true, shiftKey: true });
     expect(core.store.board().name).toBe("Renamed");
-    pressOnPage({ key: "z", metaKey: true });
+    pressOn(document.body, "z", { metaKey: true });
     expect(core.store.board().name).toBe(before);
-    pressOnPage({ key: "y", ctrlKey: true });
+    pressOn(document.body, "y", { ctrlKey: true });
     expect(core.store.board().name).toBe("Renamed");
 
     const field = document.createElement("input");
     el.append(field);
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true }));
+    act(() => {
+      field.dispatchEvent(new KeyboardEvent("keydown", { key: "z", ctrlKey: true, bubbles: true }));
+    });
     expect(core.store.board().name).toBe("Renamed");
   });
 
@@ -671,11 +705,17 @@ describe("the dock's own parts", () => {
     const name = dockBar(el).querySelector<HTMLElement>("button.blockr-dock-bar-name");
     if (name === null) throw new Error("No name.");
 
-    name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    act(() => {
+      name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    });
     expect(name.title).toBe("Click to rename");
     cutShort(name);
-    name.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
-    name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    act(() => {
+      name.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
+    });
+    act(() => {
+      name.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    });
     expect(name.title).toBe(`${core.store.board().name}\nClick to rename`);
   });
 });
@@ -692,23 +732,7 @@ beforeAll(() => {
   }
 });
 
-// Clicks the element as a pointer does, which goes down on it first.
-function click(target: Element | null | undefined): void {
-  if (target === null || target === undefined) throw new Error("Nothing to click.");
-  target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-  target.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
-}
 
-// Presses keys on the page, outside every field.
-function pressOnPage(init: KeyboardEventInit): void {
-  document.body.dispatchEvent(new KeyboardEvent("keydown", { ...init, bubbles: true, cancelable: true }));
-}
-
-// Types the text into the field, as React hears it.
-function type(field: HTMLInputElement, text: string): void {
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, text);
-  field.dispatchEvent(new Event("input", { bubbles: true }));
-}
 
 // Has the element's label measure wider than the room that it has, as where
 // the bar cuts it short.
@@ -723,7 +747,3 @@ function errors(logged: readonly LogLine[], pkg: string): string[] {
   return logged.filter((line) => line.level === "error" && line.package === pkg).map((line) => line.message);
 }
 
-// Waits for React to draw what an event changed.
-async function drawn(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-}

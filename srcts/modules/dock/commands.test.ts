@@ -11,6 +11,7 @@ import * as compactOption from "../compact-option/index.ts";
 import * as syncRailsOption from "../sync-rails-option/index.ts";
 import * as viewTabsOption from "../view-tabs-option/index.ts";
 import * as dock from "./index.tsx";
+import { expectedErrors } from "./testing.ts";
 
 const DOCK = "blockr.dock-dock_plugin";
 
@@ -672,6 +673,8 @@ describe("blockr.dock-set_grid", () => {
   });
 
   test("reads dock_grid_size_tol as a number of 0 or more, and from the string that an environment variable sets", async () => {
+    // Core logs each command that fails.
+    const taken = expectedErrors(/The command "blockr\.dock-set_grid" failed/);
     const jittered: Grid = { ...main, children: [{ panels: [a, b], active: a }, group(c)], sizes: [0.503, 0.497] };
 
     const loose = await start({ blockrOptions: { dock_grid_size_tol: "0.02" } });
@@ -689,6 +692,7 @@ describe("blockr.dock-set_grid", () => {
       );
       expect(dock()).toEqual(state);
     }
+    expect(taken).toHaveLength(3);
   });
 });
 
@@ -802,10 +806,13 @@ describe("the commands for panels and rails on a locked board", () => {
   });
 
   test("fail to move a panel where a blockr option of the lock holds no logical", async () => {
+    // Core logs the command that fails.
+    const taken = expectedErrors(/The command "blockr\.dock-move_panel" failed/);
     const { run } = await start({ locked: true, blockrOptions: { lock_rearrange: "maybe" } });
     await expect(run("move_panel", { view: "main", panel: c, near: a })).rejects.toThrow(
       'The command "blockr.dock-move_panel" failed\n- The blockr option lock_rearrange is "maybe", where it takes TRUE or FALSE.',
     );
+    expect(taken).toHaveLength(1);
   });
 });
 

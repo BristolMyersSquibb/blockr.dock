@@ -12,7 +12,7 @@
 //    name, Escape keeps the name, and an empty name, or one of spaces alone,
 //    is refused on Enter and dropped on a click elsewhere.
 // 3. The Controls toggle, once the block's UI has drawn anything, the
-//    Preview toggle and the padlock, each a bare 26px tool with its name as
+//    Preview toggle and the padlock, each a bare 24px tool with its name as
 //    its tooltip and label.
 //    A toggle runs blockr.dock-set_sections with the block's new set of
 //    sections, and is pressed while its section shows.
@@ -23,8 +23,8 @@
 //    blockr.core-change_block, and one on an open padlock sets it to null.
 // 4. The "…" button, which opens the block's menu on a press, or on ArrowDown
 //    while it has the keyboard's focus.
-//    The button and the menu are core's React SDK's, its MenuTrigger, Button,
-//    Menu, MenuItem and MenuSection, and React Aria draws the menu in a portal
+//    The button and the menu are blockr.ui's, its MenuTrigger, Button, Menu,
+//    MenuItem and MenuSection, and React Aria draws the menu in a portal
 //    at the end of the page's body, below the button and lined up with its
 //    right end.
 //    The menu holds Rename, Append block, Copy block ID, with the id as meta
@@ -40,8 +40,8 @@
 //    document's copy command needs (./clipboard.ts).
 //    Append block opens the dock's "+" menu at the same button
 //    (./classes.tsx).
-//    The "+" menu is one of the dock's pickers, drawn with core's React SDK
-//    (../picker.tsx).
+//    The "+" menu is one of the dock's pickers, drawn with blockr.ui's
+//    components (../picker.tsx).
 //    Its search takes the focus as React Aria's autoFocus does, once React Aria
 //    has freed the page.
 //    As the "+" menu closes, React Aria returns the focus to the element that
@@ -53,7 +53,7 @@
 // changes the rest there.
 
 import type { Block, BlockId, RegistryEntry } from "@blockr/core";
-import { Button, Menu, MenuItem, MenuSection, MenuTrigger, Text } from "@blockr/core/react";
+import { Button, Menu, MenuItem, MenuSection, MenuTrigger, Text } from "@blockr/ui";
 import { useEffect, useId, useRef, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { SECTIONS } from "../../../commands/index.ts";

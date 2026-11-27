@@ -103,6 +103,12 @@ An app script gives the items of the dock's navbar to \code{serve()} in
 The dock takes them through its method of \code{\link[blockr.core:frontend_args]{blockr.core::frontend_args()}}
 (see \code{\link[=default_navbar]{default_navbar()}}).
 
+The dock draws its cards, its navbar, its options sidebar and the frame of
+its panels with the theme variables of blockr.ui, and keeps the default of
+each, since its look is blockr.ui's.
+So the class has no method of \code{\link[blockr.core:frontend_theme]{blockr.core::frontend_theme()}}, and takes
+core's, which returns a theme with no values.
+
 The dock reads four board options: its own, \code{compact}, \code{view_tabs} and
 \code{sync_rails} (see \code{\link[=new_compact_option]{new_compact_option()}}), and core's \code{dark_mode}.
 The class names them through its method of \code{\link[blockr.core:plugin_options]{blockr.core::plugin_options()}},
@@ -113,6 +119,16 @@ default as the board opens, before the dock draws it.
 The package lists each of its own board options in \code{._BLOCKR_MODULES_}
 too, with its module, as \code{js/compact-option.js}, beside which the schema of
 its value ships, as \code{js/compact-option.schema.json}.
+
+The package also offers blockr.assistant a module named \code{assistant}, in the
+\code{modules} of its \code{._BLOCKR_MODULES_}, so that the module's id is
+\code{blockr.dock-assistant}.
+As each call of the assistant's model goes out, the module tells the model
+what the dock's state holds.
+It names the active view, and lists each view in the order of the views
+menu, with the panels that its grid places.
+The dock needs no dependency on blockr.assistant for this, as for its skill
+\code{layout}, which it ships in \code{inst/assistant/skills}.
 }
 \examples{
 new_dock_plugin()

@@ -5,6 +5,7 @@
 import type { CoreApi, Json, Option } from "@blockr/core";
 import { mount, stubOptionHost } from "@blockr/core/stubs";
 import type { Mounted } from "@blockr/core/stubs";
+import { find, step } from "@blockr/ui/stubs";
 import { act } from "react";
 import { describe, expect, test } from "vitest";
 // The modules of the dock's board options, which the build bundles on their
@@ -16,9 +17,6 @@ import syncRailsModule, * as syncRailsExports from "../modules/sync-rails-option
 // eslint-disable-next-line no-restricted-imports
 import viewTabsModule, * as viewTabsExports from "../modules/view-tabs-option/index.ts";
 import { compact, dockOptions, optionSchemas, syncRails, viewTabs } from "./index.ts";
-
-// React warns where an update in a test runs outside act().
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 // CoreApi with its blockrOption(), with the values that R holds, which records
 // what it is asked for.
@@ -41,26 +39,16 @@ function resolveDefault(option: Omit<Option, "id">, core: CoreApi): Promise<Json
 }
 
 // The checkbox that a board option's UI draws in `el`.
-function checkbox(el: HTMLElement): HTMLInputElement {
-  const found = el.querySelector('input[type="checkbox"]');
-  if (!(found instanceof HTMLInputElement)) throw new Error("Found no checkbox.");
-  return found;
-}
+const checkbox = (el: HTMLElement): HTMLInputElement => find(el, 'input[type="checkbox"]', HTMLInputElement);
 
 // Mounts the module, through React's act(), which runs what React scheduled
-// before the test reads the page. React's act() resolves with what the mount
-// resolved with, but its then() chains nothing, so this awaits it.
+// before the test reads the page, as blockr.ui's step() runs what a test does.
+// The stubs of blockr.ui, which core's load, have React warn of an update
+// outside act().
+// React's act() resolves with what the mount resolved with, but its then()
+// chains nothing, so this awaits it.
 async function mountReact(exports: unknown, host: unknown): Promise<Mounted> {
   return await act(() => mount(exports, host));
-}
-
-// Does what the test does to the page or the host, and then what React
-// scheduled in turn.
-async function step(fn: () => void): Promise<void> {
-  await act(() => {
-    fn();
-    return Promise.resolve();
-  });
 }
 
 const LABELS = [

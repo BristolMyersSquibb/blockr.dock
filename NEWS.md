@@ -1,5 +1,35 @@
 # blockr.dock 0.2.1
 
+* The dock draws with blockr.ui's components and takes its look from
+  blockr.ui's theme variables (#673).
+  Its pickers, the block's menu, its buttons and the checkbox of its board
+  options are blockr.ui's, where they were core's React SDK's.
+  Its cards, its bar, its options sidebar, its toasts and the frame of
+  dockview's panels take each colour, face, size of text, radius and shadow
+  from a theme variable, such as `--bk-color-card`, and keep blockr.ui's
+  defaults.
+  So they wear the colours of the menus, lists and fields that open in the
+  dock, in dark mode too.
+  Dark mode follows the attribute `data-bk-mode`, which core's board option
+  `dark_mode` sets.
+  Secondary and disabled text take the one muted grey, a disabled button draws
+  at half its opacity, and the logo takes the brand colour, `primary`.
+  Each padding, margin and gap, and the height of each control and row, is a
+  multiple of the unit `--bk-spacing`, out of a few steps that fold sizes a
+  pixel or two apart: at the default unit, the rows of a menu are 32 pixels
+  high, the icon buttons 24 and the badges 20.
+
+* The dock describes its views and the active view to blockr.assistant's
+  model, through a module named `assistant` (#687).
+  The package offers the module in the `modules` of its `._BLOCKR_MODULES_`,
+  so that its id is `blockr.dock-assistant`.
+  As each call of the model goes out, the assistant calls the module's
+  `describe()` with the dock's state.
+  The lines that it returns name the active view.
+  Then they list each view in the order of the navigation, with the panels
+  that its grid places.
+  So the assistant need not know the shape of the dock's state.
+
 * The panel picker and the "+" menu of a card draw with core's React SDK
   (#630).
   Each opens below its button in React Aria's portal at the end of the page's

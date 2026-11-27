@@ -8,15 +8,17 @@ import type { BlockStatus, Notification, NotificationSource, Severity, Status } 
 import { describe, expect, test } from "vitest";
 import { statusDot } from "./status-dot.ts";
 
-// The table of the page: each status, with whether its dot is a ring, the
-// design system's token of its colour, and its tooltip.
-const TABLE: readonly [Status, "filled" | "ring", string, string][] = [
-  ["stale", "filled", "text-muted", "Inputs changed since this block last ran"],
-  ["waiting", "ring", "border-warning", "Waiting for a data input"],
-  ["invalid", "filled", "border-warning", "Set this block's inputs"],
-  ["failed", "filled", "border-danger", "Evaluation failed"],
-  ["ready", "filled", "border-success", "Up to date"],
-  ["unevaluated", "ring", "text-muted", "Not evaluated yet"],
+// The table of the page: each status, with whether its dot is a ring, and
+// its tooltip.
+// The page names the token of each status's colour too, which core's
+// stylesheet gives as the status's colour, so the dock's copy holds none.
+const TABLE: readonly [Status, "filled" | "ring", string][] = [
+  ["stale", "filled", "Inputs changed since this block last ran"],
+  ["waiting", "ring", "Waiting for a data input"],
+  ["invalid", "filled", "Set this block's inputs"],
+  ["failed", "filled", "Evaluation failed"],
+  ["ready", "filled", "Up to date"],
+  ["unevaluated", "ring", "Not evaluated yet"],
 ];
 
 function blockStatus(status: Status): BlockStatus {
@@ -44,26 +46,17 @@ const unanswered: NotificationSource = { kind: "core", code: "output_unanswered"
 
 describe("the status dot", () => {
   test("of each status is filled or a ring, with the tooltip of the table", () => {
-    for (const [status, shape, , tooltip] of TABLE) {
+    for (const [status, shape, tooltip] of TABLE) {
       expect(statusDot(blockStatus(status), [])).toEqual({ status, ring: shape === "ring", tooltip });
     }
   });
 
-  test("of each status takes core's colour for it, with the light value of the table's token as the fallback", () => {
-    // The light values of the tokens, as the notes of the page give them.
-    const light: Readonly<Record<string, string>> = {
-      "text-muted": "#6b7280",
-      "border-warning": "#d97706",
-      "border-danger": "#dc2626",
-      "border-success": "#16a34a",
-    };
+  test("of each status takes core's colour for it, which core's stylesheet gives in each mode", () => {
     // The card's stylesheet without its comments, by its path from this file.
     const read = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
     const css = read("./card.css").replace(/\/\*[\s\S]*?\*\//g, "");
-    for (const [status, , token] of TABLE) {
-      expect(css).toContain(
-        `.blockr-card-dot[data-status="${status}"] { color: var(--bc-color-status-${status}, ${light[token] ?? token}); }`,
-      );
+    for (const [status] of TABLE) {
+      expect(css).toContain(`.blockr-card-dot[data-status="${status}"] { color: var(--bc-color-status-${status}); }`);
     }
   });
 

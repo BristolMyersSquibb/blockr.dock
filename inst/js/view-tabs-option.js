@@ -15,7 +15,8 @@ var optionSchemas = {
 };
 
 // srcts/options/ui.tsx
-import { Checkbox, reactModule, useValue } from "@blockr/core/react";
+import { reactModule, useValue } from "@blockr/core/react";
+import { Checkbox } from "@blockr/ui";
 import { jsx } from "react/jsx-runtime";
 function checkboxUi(label) {
   function CheckboxUi({ host }) {

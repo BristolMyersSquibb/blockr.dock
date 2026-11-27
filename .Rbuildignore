@@ -15,6 +15,7 @@
 ^tsconfig(\.[a-z]+)?\.json$
 ^eslint\.config\.ts$
 ^vitest\.config\.ts$
+^vitest\.setup\.ts$
 ^vignettes/.*_files$
 ^vignettes/\.quarto$
 ^coverage$

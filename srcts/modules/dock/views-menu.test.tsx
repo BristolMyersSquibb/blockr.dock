@@ -4,9 +4,11 @@
 
 import type { CoreApi, Json, JsonBoard } from "@blockr/core";
 import { stubCore } from "@blockr/core/stubs";
+import { openDialog, openMenu } from "@blockr/ui/stubs";
+import { act } from "react";
 import { describe, expect, onTestFinished, test } from "vitest";
 import type { DockState, Folder, FolderId, View } from "../../state/index.ts";
-import { DOCK, hello as dockHello, modules } from "./testing.ts";
+import { DOCK, click, drawn, hello as dockHello, modules, pressFocused, pressOn, typeInto } from "./testing.ts";
 
 function view(name: string, folder: FolderId | null, index: string): View {
   return { name, folder, index, grid: { orientation: "horizontal", children: [], sizes: [] } };
@@ -53,10 +55,10 @@ async function startViews(options: StartOptions = {}) {
       links: {},
       stacks: {},
       options: {
-        dark_mode: { value: "light", version: 1 },
-        compact: { value: false, version: 1 },
-        view_tabs: { value: options.tabs ?? false, version: 1 },
-        sync_rails: { value: true, version: 1 },
+        dark_mode: { value: "light", version: 1, package: "blockr.core" },
+        compact: { value: false, version: 1, package: "blockr.dock" },
+        view_tabs: { value: options.tabs ?? false, version: 1, package: "blockr.dock" },
+        sync_rails: { value: true, version: 1, package: "blockr.dock" },
       },
       plugins: { [DOCK]: { state: options.state ?? navigation, version: 1 } },
     },
@@ -90,13 +92,6 @@ function bar(el: HTMLElement): HTMLElement {
 function viewsButton(el: HTMLElement): HTMLButtonElement {
   const found = bar(el).querySelector<HTMLButtonElement>(".blockr-dock-views-button, .blockr-dock-views-chevron");
   if (found === null) throw new Error("The bar draws no views menu.");
-  return found;
-}
-
-// The open menu or manage mode whose label is given.
-function popover(el: HTMLElement, label: string): HTMLElement {
-  const found = el.querySelector<HTMLElement>(`[popover][aria-label="${label}"]`);
-  if (found === null) throw new Error(`No menu "${label}".`);
   return found;
 }
 
@@ -155,19 +150,20 @@ function managed(menu: HTMLElement, name: string): HTMLElement {
   return found;
 }
 
-// Opens the views menu with a click.
-async function openMenu(el: HTMLElement): Promise<HTMLElement> {
+// Opens the views menu with a click, and gives the menu, as blockr.ui's
+// openMenu() finds it by its label.
+async function openViews(el: HTMLElement): Promise<HTMLElement> {
   click(viewsButton(el));
   await drawn();
-  return popover(el, "Views");
+  return openMenu("Views");
 }
 
-// Opens the views menu and turns it to manage mode.
+// Opens the views menu and turns it to manage mode, a dialog.
 async function openManage(el: HTMLElement): Promise<HTMLElement> {
-  const menu = await openMenu(el);
+  const menu = await openViews(el);
   click(row(menu, "Manage views"));
   await drawn();
-  return popover(el, "Manage views");
+  return openDialog();
 }
 
 describe("the views menu", () => {
@@ -185,7 +181,7 @@ describe("the views menu", () => {
 
   test("lists the views and folders in the order of the navigation, with the folders that hold the active view open", async () => {
     const { el } = await startViews();
-    const menu = await openMenu(el);
+    const menu = await openViews(el);
 
     expect(menu.getAttribute("role")).toBe("menu");
     expect(treeRows(menu)).toEqual(["Overview", "- Safety", "  Adverse events *", "  + Nested", "Listing"]);
@@ -202,7 +198,7 @@ describe("the views menu", () => {
   test("opens and closes a folder in place, and keeps which folders are open on the screen, out of the board", async () => {
     const { el, core } = await startViews();
     const before = core.store.board();
-    let menu = await openMenu(el);
+    let menu = await openViews(el);
 
     click(row(menu, "Nested"));
     await drawn();
@@ -218,7 +214,7 @@ describe("the views menu", () => {
     // and Nested still open inside Safety.
     click(viewsButton(el));
     await drawn();
-    menu = await openMenu(el);
+    menu = await openViews(el);
     expect(treeRows(menu)).toEqual(["Overview", "- Safety", "  Adverse events *", "  - Nested", "    Labs", "Listing"]);
 
     expect(core.store.board()).toBe(before);
@@ -227,7 +223,7 @@ describe("the views menu", () => {
 
   test("switches views on a pick, with no undo step, and closes", async () => {
     const { el, core } = await startViews();
-    const menu = await openMenu(el);
+    const menu = await openViews(el);
 
     click(row(menu, "Listing"));
     await drawn();
@@ -239,7 +235,7 @@ describe("the views menu", () => {
 
   test("switches views under the board lock, which leaves out managing them and the row of the tabs", async () => {
     const { el, core } = await startViews({ locked: true });
-    const menu = await openMenu(el);
+    const menu = await openViews(el);
 
     expect(treeRows(menu)).toEqual(["Overview", "- Safety", "  Adverse events *", "  + Nested", "Listing"]);
     expect(menu.textContent).not.toContain("Manage views");
@@ -251,17 +247,19 @@ describe("the views menu", () => {
 
   test("moves through its rows with the keys of a menu, and opens and closes a folder with ArrowRight and ArrowLeft", async () => {
     const { el } = await startViews();
-    viewsButton(el).focus();
-    press("ArrowDown");
+    act(() => {
+      viewsButton(el).focus();
+    });
+    pressFocused("ArrowDown");
     await drawn();
-    const menu = popover(el, "Views");
+    const menu = openMenu("Views");
 
     // The keyboard opens the menu on the active view, while the focus stays on
     // the menu.
     expect(document.activeElement).toBe(menu);
     expect(activeRow(menu)).toBe("Adverse events");
     const step = async (key: string) => {
-      press(key);
+      pressFocused(key);
       await drawn();
     };
     await step("ArrowDown");
@@ -283,12 +281,12 @@ describe("the views menu", () => {
     expect(activeRow(menu)).toBe("Show views as tabs");
     await step("ArrowUp");
     await step("Enter");
-    expect(popover(el, "Manage views").getAttribute("role")).toBe("dialog");
+    expect(openDialog().getAttribute("aria-label")).toBe("Manage views");
   });
 
   test("turns the line of tabs on and off from the row Show views as tabs, whose check shows while it is on", async () => {
     const { el, core } = await startViews();
-    let menu = await openMenu(el);
+    let menu = await openViews(el);
     const toggle = row(menu, "Show views as tabs");
     expect(toggle.getAttribute("role")).toBe("menuitemcheckbox");
     expect(toggle.getAttribute("aria-checked")).toBe("false");
@@ -299,7 +297,7 @@ describe("the views menu", () => {
     expect(core.store.board().options.view_tabs).toBe(true);
     expect(viewsButton(el).getAttribute("aria-expanded")).toBe("false");
 
-    menu = await openMenu(el);
+    menu = await openViews(el);
     expect(row(menu, "Show views as tabs").getAttribute("aria-checked")).toBe("true");
     expect(row(menu, "Show views as tabs").querySelector(".blockr-dock-check")).not.toBeNull();
     click(row(menu, "Show views as tabs"));
@@ -324,22 +322,22 @@ describe("the views menu in manage mode", () => {
 
     click(button(menu, "Done"));
     await drawn();
-    menu = popover(el, "Views");
+    menu = openMenu("Views");
     expect(menu.getAttribute("role")).toBe("menu");
     expect(treeRows(menu)).toContain("Overview");
 
     click(row(menu, "Manage views"));
     await drawn();
-    expect(popover(el, "Manage views").getAttribute("role")).toBe("dialog");
+    expect(openDialog().getAttribute("aria-label")).toBe("Manage views");
     click(viewsButton(el));
     await drawn();
-    menu = await openMenu(el);
+    menu = await openViews(el);
     expect(menu.getAttribute("role")).toBe("menu");
 
     // Escape closes manage mode, and the focus goes back to the button.
     click(row(menu, "Manage views"));
     await drawn();
-    pressIn(popover(el, "Manage views"), "Escape");
+    pressOn(openDialog(), "Escape");
     await drawn();
     expect(el.querySelector('[aria-label="Manage views"]')).toBeNull();
     expect(document.activeElement).toBe(viewsButton(el));
@@ -360,10 +358,10 @@ describe("the views menu in manage mode", () => {
     expect(document.activeElement).toBe(field);
 
     if (field === null) throw new Error("No field.");
-    type(field, "Demographics");
+    typeInto(field, "Demographics");
     // Enter's default goes, since the keypress that follows would click the
     // name, which takes the focus back, and open the field again.
-    expect(pressIn(field, "Enter").defaultPrevented).toBe(true);
+    expect(pressOn(field, "Enter")).toBe(true);
     await drawn();
     expect(stateOf(core).views[added]?.name).toBe("Demographics");
     expect(managedRows(menu).at(-1)).toBe("Demographics");
@@ -383,8 +381,10 @@ describe("the views menu in manage mode", () => {
     const field = menu.querySelector<HTMLInputElement>(".blockr-dock-views-field");
     expect(field?.value).toBe("Folder 3");
     if (field === null) throw new Error("No field.");
-    type(field, "Efficacy");
-    field.blur();
+    typeInto(field, "Efficacy");
+    act(() => {
+      field.blur();
+    });
     await drawn();
     expect(stateOf(core).folders[added]?.name).toBe("Efficacy");
     expect(stateOf(core).active).toBe("ae");
@@ -394,7 +394,9 @@ describe("the views menu in manage mode", () => {
     const { el, core } = await startViews();
     const menu = await openManage(el);
     const name = managed(menu, "Safety").querySelector<HTMLElement>(".blockr-dock-views-name");
-    name?.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    act(() => {
+      name?.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+    });
     expect(name?.title).toBe("Click to rename");
 
     click(name);
@@ -402,8 +404,8 @@ describe("the views menu in manage mode", () => {
     let field = menu.querySelector<HTMLInputElement>(".blockr-dock-views-field");
     if (field === null) throw new Error("No field.");
     expect(field.getAttribute("aria-label")).toBe("Folder name");
-    type(field, "Safety tables");
-    pressIn(field, "Enter");
+    typeInto(field, "Safety tables");
+    pressOn(field, "Enter");
     await drawn();
     expect(stateOf(core).folders.safety?.name).toBe("Safety tables");
 
@@ -411,11 +413,11 @@ describe("the views menu in manage mode", () => {
     await drawn();
     field = menu.querySelector<HTMLInputElement>(".blockr-dock-views-field");
     if (field === null) throw new Error("No field.");
-    type(field, "Listings");
-    const escape = pressIn(field, "Escape");
+    typeInto(field, "Listings");
+    const escaped = pressOn(field, "Escape");
     await drawn();
     // Escape gives up the edit alone, and keeps the menu open.
-    expect(escape.defaultPrevented).toBe(true);
+    expect(escaped).toBe(true);
     expect(stateOf(core).views.listing?.name).toBe("Listing");
     expect(menu.querySelector(".blockr-dock-views-field")).toBeNull();
 
@@ -423,8 +425,8 @@ describe("the views menu in manage mode", () => {
     await drawn();
     field = menu.querySelector<HTMLInputElement>(".blockr-dock-views-field");
     if (field === null) throw new Error("No field.");
-    type(field, "   ");
-    pressIn(field, "Enter");
+    typeInto(field, "   ");
+    pressOn(field, "Enter");
     await drawn();
     expect(stateOf(core).views.listing?.name).toBe("Listing");
     expect(viewsButton(el).getAttribute("aria-expanded")).toBe("true");
@@ -439,7 +441,7 @@ describe("the views menu in manage mode", () => {
     const asking = menu.querySelector<HTMLElement>("[data-confirming]");
     expect(asking?.textContent).toBe("Remove “Listing”?Remove");
     expect(document.activeElement?.textContent).toBe("Remove");
-    pressIn(document.activeElement, "Escape");
+    pressFocused("Escape");
     await drawn();
     expect(menu.querySelector("[data-confirming]")).toBeNull();
     expect(Object.keys(stateOf(core).views)).toContain("listing");
@@ -475,20 +477,28 @@ describe("the views menu in manage mode", () => {
 
     // Listing goes into Safety, over the middle of Safety's row, the second.
     const grip = gripOf(managed(menu, "Listing"));
-    grip.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, clientY: 150 }));
+    act(() => {
+      grip.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, clientY: 150 }));
+    });
     await drawn();
     expect(managed(menu, "Listing").dataset.dragging).toBe("");
-    grip.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientY: 51 }));
+    act(() => {
+      grip.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientY: 51 }));
+    });
     await drawn();
     expect(managed(menu, "Safety").dataset.drop).toBe("into");
-    grip.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 1, clientY: 51 }));
+    act(() => {
+      grip.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 1, clientY: 51 }));
+    });
     await drawn();
     expect(stateOf(core).views.listing?.folder).toBe("safety");
     expect(managedRows(menu)).toEqual(["Overview", "Safety", "  Adverse events", "  Nested", "  Listing"]);
     expect(menu.querySelector("[data-drop]")).toBeNull();
     expect(menu.querySelector("[data-dragging]")).toBeNull();
 
-    core.store.undo();
+    act(() => {
+      core.store.undo();
+    });
     await drawn();
     expect(stateOf(core).views.listing).toEqual(navigation.views.listing);
   });
@@ -500,14 +510,22 @@ describe("the views menu in manage mode", () => {
     const before = core.store.board();
 
     const grip = gripOf(managed(menu, "Safety"));
-    grip.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, clientY: 50 }));
-    grip.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientY: 51 }));
+    act(() => {
+      grip.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, button: 0, pointerId: 1, clientY: 50 }));
+    });
+    act(() => {
+      grip.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientY: 51 }));
+    });
     await drawn();
     expect(menu.querySelector("[data-drop]")).toBeNull();
-    grip.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientY: 119 }));
+    act(() => {
+      grip.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, pointerId: 1, clientY: 119 }));
+    });
     await drawn();
     expect(menu.querySelector("[data-drop]")).toBeNull();
-    grip.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 1, clientY: 119 }));
+    act(() => {
+      grip.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, pointerId: 1, clientY: 119 }));
+    });
     await drawn();
     expect(core.store.board()).toBe(before);
   });
@@ -554,7 +572,7 @@ describe("the line of tabs", () => {
 
     click(safety);
     await drawn();
-    const menu = popover(el, "Safety");
+    const menu = openMenu("Safety");
     expect(safety.getAttribute("aria-expanded")).toBe("true");
     expect(treeRows(menu)).toEqual(["Adverse events *", "+ Nested"]);
     click(row(menu, "Nested"));
@@ -564,13 +582,13 @@ describe("the line of tabs", () => {
     // The views menu shows Nested open too.
     click(viewsButton(el));
     await drawn();
-    expect(treeRows(popover(el, "Views"))).toContain("    Labs");
+    expect(treeRows(openMenu("Views"))).toContain("    Labs");
     click(viewsButton(el));
     await drawn();
 
     click(safety);
     await drawn();
-    click(row(popover(el, "Safety"), "Labs"));
+    click(row(openMenu("Safety"), "Labs"));
     await drawn();
     expect(stateOf(core).active).toBe("labs");
     expect(safety.getAttribute("aria-expanded")).toBe("false");
@@ -591,7 +609,7 @@ describe("the line of tabs", () => {
 });
 
 // Has each row of the menu in manage mode sit 34 pixels below the one before,
-// from the top of the window, as a browser lays them out, which happy-dom
+// from the top of the window, as a browser stacks them, which happy-dom
 // does not.
 function stackRows(menu: HTMLElement): void {
   menu.querySelectorAll<HTMLElement>(".blockr-dock-views-managed").forEach((managedRow, i) => {
@@ -605,33 +623,4 @@ function gripOf(managedRow: HTMLElement): HTMLElement {
   return grip;
 }
 
-// Clicks the element as a pointer does, which goes down on it first.
-function click(target: Element | null | undefined): void {
-  if (target === null || target === undefined) throw new Error("Nothing to click.");
-  target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-  target.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
-}
 
-// Presses a key in the element that has the focus.
-function press(key: string): void {
-  pressIn(document.activeElement, key);
-}
-
-// Presses a key in the element given, and gives the event.
-function pressIn(target: Element | null, key: string): KeyboardEvent {
-  if (target === null) throw new Error("Nothing to press a key in.");
-  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
-  target.dispatchEvent(event);
-  return event;
-}
-
-// Types the text into the field, as React hears it.
-function type(field: HTMLInputElement, text: string): void {
-  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(field, text);
-  field.dispatchEvent(new Event("input", { bubbles: true }));
-}
-
-// Waits for React to draw what an event changed.
-async function drawn(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-}

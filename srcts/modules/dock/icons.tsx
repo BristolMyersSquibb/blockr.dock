@@ -131,7 +131,7 @@ export function RemoveIcon(): ReactElement {
 
 // The sliders of a row that turns a menu to a mode of its own, as "Manage
 // views".
-// Its knobs take the raised surface of the menu, so that the lines stop at
+// Its knobs take the colour of the menu, a popover, so that the lines stop at
 // them.
 export function SlidersIcon(): ReactElement {
   return (
@@ -147,9 +147,9 @@ export function SlidersIcon(): ReactElement {
       focusable="false"
     >
       <path d="M2 4h12M2 8h12M2 12h12" />
-      <circle cx="5" cy="4" r="1.6" fill="var(--blockr-dock-bg-raised)" />
-      <circle cx="10" cy="8" r="1.6" fill="var(--blockr-dock-bg-raised)" />
-      <circle cx="6" cy="12" r="1.6" fill="var(--blockr-dock-bg-raised)" />
+      <circle cx="5" cy="4" r="1.6" fill="var(--bk-color-popover)" />
+      <circle cx="10" cy="8" r="1.6" fill="var(--bk-color-popover)" />
+      <circle cx="6" cy="12" r="1.6" fill="var(--bk-color-popover)" />
     </svg>
   );
 }

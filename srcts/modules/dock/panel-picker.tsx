@@ -26,7 +26,7 @@
 
 import type { BlockRegistry, Board, Json, PluginClassId } from "@blockr/core";
 import { useBoard } from "@blockr/core/react";
-import type { ButtonProps } from "@blockr/core/react";
+import type { ButtonProps } from "@blockr/ui";
 import { createContext, useContext, useId, useMemo, useState } from "react";
 import type { ReactElement, ReactNode } from "react";
 import { activeView, dockState } from "../../commands/index.ts";
@@ -79,7 +79,7 @@ export function PanelPicker({ children }: { readonly children: ReactNode }): Rea
   );
 }
 
-// The props of a button of core's React SDK that opens the panel picker.
+// The props of a button of blockr.ui that opens the panel picker.
 // The function `near` gives the panel near which a pick goes, or undefined for
 // the default place, as the user opens the picker.
 // Safari does not focus a button that the user clicks, so the button takes the
